@@ -27,7 +27,8 @@ __all__ = [
 ]
 
 
-# Copied from .paddlenlp.transformers.bart.modeling.shift_tokens_right
+# Copied from paddlenlp.transformers.bart.modeling.shift_tokens_right
+# with Blenderbot -> BlenderbotSmall
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
@@ -37,10 +38,11 @@ def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     shifted_input_ids[:, 0] = decoder_start_token_id
     return shifted_input_ids
 
-# Copied from .paddlenlp.transformers.blenderbot.modeling.BlenderbotLearnedPositionalEmbedding
+
+# Copied from paddlenlp.transformers.blenderbot.modeling.BlenderbotLearnedPositionalEmbedding
 # with Blenderbot -> BlenderbotSmall
 class BlenderbotSmallLearnedPositionalEmbedding(Embedding):
-    def __init__(self, num_embeddings, embedding_dim, padding_idx):
+    def __init__(self, num_embeddings, embedding_dim, padding_idx=None):
         super().__init__(
             num_embeddings,
             embedding_dim,
@@ -56,8 +58,6 @@ class BlenderbotSmallLearnedPositionalEmbedding(Embedding):
         return super().forward(positions)
 
 
-# copy from .paddlenlp.transformers.bart.modeling.BartPretrainedModel
-# with BartPretrainedModel -> BlenderbotSmall
 class BlenderbotSmallPretrainedModel(PretrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading
@@ -81,7 +81,7 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
             "init_std": 0.02,
             "max_position_embeddings": 512,
             "pad_token_id": 0,
-            "scale_embedding": True,  # TODO
+            "scale_embedding": True,  # BlenderSmall do embedding scale
             "vocab_size": 54944
         },
         "blenderbot-90M": {
@@ -109,7 +109,7 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
         # TODO 更改链接格式
         "model_state": {
             "blenderbot_small-90M":
-        "blenderbot_small-90M/model_state.pdparams",
+                "blenderbot_small-90M/model_state.pdparams",
             "blenderbot-90M":
                 "blenderbot-90M/model_state.pdparams",
         }
@@ -130,8 +130,6 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
                         shape=layer.weight.shape))
 
 
-# Copied from .paddlenlp.transformers.bart.modeling.BartEncoder
-# with Bart -> BlenderbotSmall
 class BlenderbotSmallEncoder(BlenderbotSmallPretrainedModel):
     def __init__(self,
                  embed_tokens,
@@ -170,7 +168,7 @@ class BlenderbotSmallEncoder(BlenderbotSmallPretrainedModel):
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
             normalize_before=False
-            )
+        )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
         self.apply(self.init_weights)
 
@@ -271,12 +269,11 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
         return decoder_output
 
 
-# Copied from .paddlenlp.transformers.bart.modeling.BartMOdel
-# with Bart -> BlenderbotSmall
 @register_base_model
 class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
     """
     """
+
     def __init__(self,
                  vocab_size,
                  bos_token_id=1,
@@ -365,7 +362,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPretrainedModel):
                 encoder_output=None,
                 cache=None):
         output = self.blenderbot_small(input_ids, attention_mask, decoder_input_ids,
-                           decoder_attention_mask, encoder_output, cache)
+                                       decoder_attention_mask, encoder_output, cache)
         lm_logits = paddle.tensor.matmul(
             output if cache is None else output[0],
             self.lm_head_weight,

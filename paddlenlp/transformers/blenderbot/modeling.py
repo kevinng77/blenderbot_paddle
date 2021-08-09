@@ -29,6 +29,7 @@ __all__ = [
 
 
 # Copied from .paddlenlp.transformers.bart.modeling.shift_tokens_right
+# with Blenderbot -> BlenderbotSmall
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
@@ -145,7 +146,6 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
         return super().forward(positions)
 
 
-# Copied from transformers.bart
 class BlenderbotEncoder(BlenderbotPretrainedModel):
     def __init__(self,
                  embed_tokens,
@@ -212,7 +212,6 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
         return encoder_output
 
 
-# Copied from transformers.bart
 class BlenderbotDecoder(BlenderbotPretrainedModel):
     def __init__(self,
                  embed_tokens,
@@ -287,7 +286,6 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
         return decoder_output
 
 
-# Copied from transformers.bart
 @register_base_model
 class BlenderbotModel(BlenderbotPretrainedModel):
     def __init__(self,
