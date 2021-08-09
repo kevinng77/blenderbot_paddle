@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import shutil
 from functools import lru_cache
 
 import json
@@ -19,6 +21,7 @@ from .. import PretrainedTokenizer
 from paddle.utils import try_import
 
 __all__ = ['BlenderbotSmallTokenizer']
+
 
 @lru_cache()
 def bytes_to_unicode():
@@ -36,13 +39,14 @@ def bytes_to_unicode():
         range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
     cs = bs[:]
     n = 0
-    for b in range(2**8):
+    for b in range(2 ** 8):
         if b not in bs:
             bs.append(b)
-            cs.append(2**8 + n)
+            cs.append(2 ** 8 + n)
             n += 1
     cs = [_chr(n) for n in cs]
     return dict(zip(bs, cs))
+
 
 def get_pairs(word):
     """Return set of symbol pairs in a word.
@@ -71,12 +75,13 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
         },
         "merges_file": {
             "blenderbot_small-90M":
-            "blenderbot_small-90M/merges.txt",
+                "blenderbot_small-90M/merges.txt",
             "blenderbot-90M":
                 "blenderbot-90M/merges.txt"
         }
     }
-    pretrained_init_configuration = {"blenderbot_small-90M": {},"blenderbot-90M": {}}
+    pretrained_init_configuration = {"blenderbot_small-90M": {}, "blenderbot-90M": {}}
+
     def __init__(
             self,
             vocab_file,
@@ -108,13 +113,11 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
         bpe_merges = [tuple(merge.split()) for merge in bpe_data]
         self.bpe_ranks = dict(zip(bpe_merges, range(len(bpe_merges))))
         self.cache = {}
-        re = try_import("regex")
         self.pat = r"\S+\n?"
         self.unk_id = self.encoder[unk_token]
         self.special_tokens = {}
         self.special_tokens_decoder = {}
         self.set_special_tokens(special_tokens)
-
 
     def __len__(self):
         return len(self.encoder) + len(self.special_tokens)
@@ -134,7 +137,6 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
             v: k
             for k, v in self.special_tokens.items()
         }
-        logger.info("Special tokens {}".format(self.special_tokens))
 
     def bpe(self, token):
         if token in self.cache:
@@ -195,6 +197,7 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
             self.cache[token] = word
             words.append(word)
         return " ".join(words)
+
     def tokenize(self, text):
         return self._tokenize(text)
 
@@ -204,7 +207,6 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
         for token in re.findall(self.pat, text):
             bpe_tokens.extend([t for t in self.bpe(token).split(" ")])
         return bpe_tokens
-
 
     def convert_tokens_to_ids(self, tokens):
         """ Converts a sequence of tokens into ids using the vocab. """

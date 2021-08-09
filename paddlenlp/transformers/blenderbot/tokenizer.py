@@ -25,29 +25,28 @@ class BlenderbotTokenizer(GPTTokenizer):
     pretrained_resource_files_map = {
         "vocab_file": {
             "blenderbot-400M-distill":
-            "blenderbot-400M-distill/vocab.json",
+                "blenderbot-400M-distill/vocab.json",
             # "blenderbot-90M":
             # "blenderbot-90M/vocab.json",
             "blenderbot-3B":
                 "blenderbot-3B/vocab.json",
             "blenderbot-1B-distill":
-                "blenderbot-1B-distill/vocab.json"        },
+                "blenderbot-1B-distill/vocab.json"},
         "merges_file": {
             "blenderbot-400M-distill":
-            "blenderbot-400M-distill/merges.txt",
+                "blenderbot-400M-distill/merges.txt",
             # "blenderbot-90M":
             # "blenderbot-90M/merges.txt",
             "blenderbot-3B":
-            "blenderbot-3B/merges.txt",
+                "blenderbot-3B/merges.txt",
             "blenderbot-1B-distill":
-            "blenderbot-1B-distill/merges.txt"
+                "blenderbot-1B-distill/merges.txt"
         }
     }
-    pretrained_init_configuration = {"blenderbot-3B": {},
-                                     "blenderbot-400M-distill": {
-                                         "add_prefix":True
-                                     },
-                                     "blenderbot-1B-distill":{}}
+    pretrained_init_configuration = {"blenderbot-3B": {"add_prefix": True},
+                                     "blenderbot-400M-distill": {"add_prefix": True},
+                                     "blenderbot-1B-distill": {"add_prefix": True}}
+
     def __init__(
             self,
             vocab_file,
@@ -64,9 +63,10 @@ class BlenderbotTokenizer(GPTTokenizer):
             eol_token='\u010a',  # The token of newline.
     ):
         super(BlenderbotTokenizer, self).__init__(vocab_file, merges_file, errors,
-                                            max_len, special_tokens, pad_token,
-                                            eos_token, eol_token)
+                                                  max_len, special_tokens, pad_token,
+                                                  eos_token, eol_token)
         self.add_prefix = add_prefix
+
     def __call__(self,
                  text,
                  text_pair=None,
@@ -87,7 +87,6 @@ class BlenderbotTokenizer(GPTTokenizer):
             return_token_type_ids, return_attention_mask, return_length,
             return_overflowing_tokens, return_special_tokens_mask)
 
-
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """
         Format of Blenderbot sequence: ``X </s>``
@@ -100,7 +99,7 @@ class BlenderbotTokenizer(GPTTokenizer):
     def _tokenize(self, text):
         """ Tokenize a string. """
         if self.add_prefix:
-            text = " "+text
+            text = " " + text
         bpe_tokens = []
         re = try_import("regex")
         for token in re.findall(self.pat, text):
@@ -109,19 +108,3 @@ class BlenderbotTokenizer(GPTTokenizer):
                 bpe_token for bpe_token in self.bpe(token).split(' '))
         return bpe_tokens
 
-    def _build_conversation_input_ids(self, conversation):
-        # TODO
-        pass
-
-
-# def get_pairs(word):
-#     """
-#     Return set of symbol pairs in a word.
-#     Word is represented as tuple of symbols (symbols being variable-length strings).
-#     """
-#     pairs = set()
-#     prev_char = word[0]
-#     for char in word[1:]:
-#         pairs.add((prev_char, char))
-#         prev_char = char
-#     return pairs
