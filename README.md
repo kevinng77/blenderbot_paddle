@@ -2,6 +2,8 @@
 
 用Paddle复现[Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf)论文
 
+开放式的聊天系统一直是机械学习/深度学习领域的一个巨大挑战。Blenderbot一文展示了大规模模型在对训练数据和对话生成方式进行合理选择后，可以在对话中做到强调重点，保持对话个性与聊天基调等。
+
 本次复现的模型为 Blenderbot（对应论文中2.7B模型 ） 与 Blenderbot small （对应论文中90M模型)）
 
 ### tokenizer核对
@@ -45,6 +47,8 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 > paddle tokenizer:  [863, 1069, 2871, 14, 382, 33, 39, 1861, 618, 847, 911, 1372, 33, 16, 2]
 
 #### 权重转换
+
+将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要模型到对应的目录下。
 
 ```python
  python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
