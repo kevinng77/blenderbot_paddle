@@ -43,8 +43,12 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 #### 权重转换
 
 ```python
-. ./convert.sh
+ python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
 ```
+
+程序会从 `--torch_file_folder/model_name/pytorch_model.bin` 加载torch 权重，以上面代码为例，加载路径为 `../../../下载/blenderbot-400M-distill/pytorch_model.bin`
+
+默认输出路径为 `./blenderbot-400M-distill/model_state.pdparams`
 
 #### 精度校验
 

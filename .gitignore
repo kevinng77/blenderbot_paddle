@@ -4,7 +4,7 @@ bert/
 compare/
 */*.bin
 */model_state.pdparams
-
+param_check.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

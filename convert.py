@@ -16,12 +16,12 @@ from collections import OrderedDict
 import argparse
 import re
 import pickle
+import torch
+import paddle
 
 
 def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
                                          paddle_dump_path):
-    import torch
-    import paddle
     pytorch_state_dict = torch.load(pytorch_checkpoint_path, map_location="cpu")
     paddle_state_dict = OrderedDict()
     paddle.set_device("cpu")
@@ -32,12 +32,8 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
         if k[-7:] == ".weight":
             if not any([w in k for w in dont_transpose]):
                 if v.ndim == 2:
-                    # print(f"transpose {k}")
                     v = v.transpose(0, 1)
-        # if "self.key_conv_attn_layer.bias" in k:
-        #     v = v.squeeze(-1)
 
-        oldk = k
         if k.startswith('model.decoder.'):
             mapping = decoder_mapping
             tw_offset = "model.decoder."
@@ -52,32 +48,30 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
             pw_offset = ""
         for huggingface_name, paddle_name in mapping.items():
             k = re.sub(tw_offset + huggingface_name,
-                           pw_offset + paddle_name,k)
-
-        # print(f"Converting: {oldk} => {k}")
+                       pw_offset + paddle_name, k)
         paddle_state_dict[k] = v.data.numpy().astype('float32')
-
-    # with open(paddle_dump_path,"wb")as f:
-        # pickle.dump(paddle_state_dict,f)
     paddle.save(paddle_state_dict, paddle_dump_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name",type=str,default="blenderbot-400M-distill")
+    parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
+    parser.add_argument("--torch_file_folder", type=str, default="=../../../下载")
+
     args = parser.parse_args()
-    model_list = ["blenderbot_small-90M","blenderbot-400M-distill"]
-    pytorch_checkpoint_path= f"../../../下载/{args.model_name}/pytorch_model.bin"
+
+    pytorch_checkpoint_path = f"{args.torch_file_folder}/{args.model_name}/pytorch_model.bin"
     paddle_dump_path = f"./{args.model_name}/model_state.pdparams"
 
     if args.model_name == "blenderbot_small-90M":
         model = "blenderbot_small"
-    elif args.model_name in ["blenderbot-400M-distill","blenderbot-1B-distill","blenderbot-3B"]:
+    elif args.model_name in ["blenderbot-400M-distill", "blenderbot-1B-distill", "blenderbot-3B"]:
         model = "blenderbot"
 
-    no_bias = ["embed_positions",
-               "embed_tokens"]
-    print('converting',args.model_name)
+    print('converting ', args.model_name)
+    print('loading from ', pytorch_checkpoint_path)
+    print('output path ', paddle_dump_path)
+
     decoder_mapping = {
         "embed_positions": "decoder_embed_positions",
         "layernorm_embedding": "decoder_layernorm_embedding",
@@ -101,7 +95,7 @@ if __name__ == "__main__":
         r"layers.(\d+).final_layer_norm": r"encoder.layers.\1.norm2",
         r"layers.(\d+).decoder_attn_layer_norm": r"encoder.layers.\1.norm3",
         "embed_tokens": "embed_tokens",
-        "layer_norm":"encoder_layernorm"
+        "layer_norm": "encoder_layernorm"
     }
     other_maps = {
         "final_logits_bias": "final_logits_bias",
