@@ -4,8 +4,8 @@ import torch
 
 paddle.set_device("cpu")
 text = [
-    # "it is a nice day today!",  # 官方例题
     "My friends are cool but they eat too many carbs.",  # 官方例题
+    "it is a nice day today!",  # 官方例题
 ]
 
 

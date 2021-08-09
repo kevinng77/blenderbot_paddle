@@ -2,7 +2,11 @@
 
 用Paddle复现[Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf)论文
 
+本次复现的模型为 Blenderbot（对应论文中2.7B模型 ） 与 Blenderbot small （对应论文中90M模型)）
+
 ### tokenizer核对
+
+> 本仓库实现了 tokenizer与transformers 的对齐
 
 核对 blenderbotsmall 的tokenizer
 
@@ -56,23 +60,15 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 python model_check.py --model_name=blenderbot-400M-distill
 ```
 
-```
-huggingface facebook/blenderbot-400M-distill vs paddle blenderbot-400M-distill
-input text: My friends are cool but they eat too many carbs.
-mean difference: tensor(8.6926e-07)
-max difference: tensor(9.5367e-06)
-```
+![image-20210809182542119](img/README/image-20210809182542119.png)
 
 ```shell
 python model_check.py --model_name=blenderbot_small-90M
 ```
 
-```
-huggingface facebook/blenderbot_small-90M vs paddle blenderbot_small-90M
-input text: My friends are cool but they eat too many carbs.
-mean difference: tensor(1.7785e-06)
-max difference: tensor(1.0014e-05)
-```
+![image-20210809182647118](img/README/image-20210809182647118.png)
+
+对官方给出的例句与随意例句，前向传导后的logits误差都在1E-5级别。
 
 #### 注重点
 
