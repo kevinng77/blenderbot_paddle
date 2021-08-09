@@ -27,6 +27,7 @@ __all__ = [
     'BlenderbotForConditionalGeneration'
 ]
 
+
 # Copied from .paddlenlp.transformers.bart.modeling.shift_tokens_right
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
@@ -47,34 +48,19 @@ class BlenderbotPretrainedModel(PretrainedModel):
         "blenderbot-3B": {
             "attention_dropout": 0.0,
             "bos_token_id": 1,
-            "classif_dropout": 0.0,
             "d_model": 2560,
             "decoder_attention_heads": 32,
             "decoder_ffn_dim": 10240,
-            "decoder_layerdrop": 0.0,
-            "decoder_layers": 24,
+            "num_decoder_layers": 24,
             "dropout": 0.1,
             "encoder_attention_heads": 32,
             "encoder_ffn_dim": 10240,
-            "encoder_layerdrop": 0.0,
-            "encoder_layers": 2,
+            "num_encoder_layers": 2,
             "eos_token_id": 2,
-            "extra_pos_embeddings": 0,
-            # "force_bos_token_to_be_generated": False,
             "init_std": 0.02,
-            "length_penalty": 0.65,
-            "max_length": 60,
             "max_position_embeddings": 128,
-            "min_length": 20,
-            # "model_type": "blenderbot",
-            "no_repeat_ngram_size": 3,
-            "num_beams": 10,
-            "num_hidden_layers": 2,
             "pad_token_id": 0,
-            # "scale_embedding": True,
-            # "static_position_embeddings": False,
-            "unk_token_id": 3,
-            "layernorm_variant": "prelayernorm",
+            "scale_embedding": True,
             "vocab_size": 8008
         },
         "blenderbot-400M-distill": {
@@ -99,52 +85,35 @@ class BlenderbotPretrainedModel(PretrainedModel):
         "blenderbot-1B-distill": {
             "attention_dropout": 0.0,
             "bos_token_id": 1,
-            "classif_dropout": 0.0,
-            "classifier_dropout": 0.0,
             "d_model": 2560,
             "decoder_attention_heads": 32,
             "decoder_ffn_dim": 10240,
-            "decoder_layerdrop": 0.0,
-            "decoder_layers": 12,
+            "num_decoder_layers": 12,
             "dropout": 0.1,
             "encoder_attention_heads": 32,
             "encoder_ffn_dim": 10240,
-            "encoder_layerdrop": 0.0,
-            "encoder_layers": 2,
+            "num_encoder_layers": 2,
             "eos_token_id": 2,
-            "extra_pos_embeddings": 0,
             "init_std": 0.02,
-            "layernorm_variant": "prelayernorm",
-            "length_penalty": 0.65,
-            "max_length": 60,
             "max_position_embeddings": 128,
-            "min_length": 20,
-            # "model_type": "blenderbot",
-            "no_repeat_ngram_size": 3,
             "normalize_before": True,
-            # "normalize_embedding": false,
-            "num_beams": 10,
-            "num_hidden_layers": 2,
             "pad_token_id": 0,
             "scale_embedding": True,
-            # "static_position_embeddings": false,
-            "unk_token_id": 3,
-            "use_cache": True,
             "vocab_size": 8008
         }
     }
     resource_files_names = {"model_state": "model_state.pdparams"}
     pretrained_resource_files_map = {
         "model_state": {
-           # TODO 90 M =  small? 3B = 2.7B? 400M = 360M? 1B = 1.4B?
             "blenderbot-3B":
                 "blenderbot-3B/model_state.pdparams",
             "blenderbot-1B-distill":
-                "blenderbot-1B-distill.pdparams",
+                "blenderbot-1B-distill/model_state.pdparams",
             "blenderbot-400M-distill":
                 "blenderbot-400M-distill/model_state.pdparams",
         }
     }
+
     def init_weights(self, layer):
         """ Initialization hook """
         if isinstance(layer, (nn.Linear, nn.Embedding)):
@@ -164,7 +133,7 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
         super().__init__(
             num_embeddings,
             embedding_dim,
-    )
+        )
 
     def forward(self, input_ids_shape, past_key_values_length=0):
         """`input_ids_shape` is expected to be [bsz x seqlen]."""
@@ -177,7 +146,6 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
 
 
 # Copied from transformers.bart
-# TODO EDIT LAYERNORM
 class BlenderbotEncoder(BlenderbotPretrainedModel):
     def __init__(self,
                  embed_tokens,
@@ -368,8 +336,7 @@ class BlenderbotModel(BlenderbotPretrainedModel):
                 decoder_attention_mask=None,
                 encoder_output=None,
                 cache=None):
-        # TODO check same with bart
-        # different to other models, Bart automatically creates decoder_input_ids from
+        # different to other models, Blenderbot automatically creates decoder_input_ids from
         # inputBartForSequenceClassification_ids if no decoder_input_ids are provided
         if decoder_input_ids is None:
             decoder_input_ids = shift_tokens_right(input_ids,

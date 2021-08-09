@@ -1,17 +1,6 @@
 # blenderbot_paddle
+
 用Paddle复现[Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf)论文
-
-论文名称： [Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf)
-数据集： 无
-验收标准： 
-
-1. 复现Blenderbot和Blenderbot Small两个模型（参考论文和实现链接）
-
-2. 完成模型权重从pytorch到paddle的转换代码，
-   转换4个预训练权重（90M，2.7B，2.7B distilled to 1.4B，2.7B distilled to 360M）
-3. Blenderbot For Conditional Generation模型和Blenderbot Small For Conditional Generation
-   模型前向推理输出对齐参考代码（90M和2.7B distilled to 360M两个权重）
-4. 提交PR至PaddleNLP
 
 ### tokenizer核对
 
