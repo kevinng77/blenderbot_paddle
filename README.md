@@ -90,9 +90,9 @@ python model_check.py --model_name=blenderbot_small-90M
 
 #### 注重点
 
-|                                     | small-90M | normal |
-| ----------------------------------- | --------- | ------ |
-| Normalize_before                    | False     | True   |
-| encoder/decoder layer norm position | before    | after  |
-| config与词表区别大                  |           |        |
+|                      | small-90M | normal |
+| -------------------- | --------- | ------ |
+| Normalize_before     | False     | True   |
+| add_final_layer_norm | False     | True   |
+| normalize_embedding  | True      | False  |
 
