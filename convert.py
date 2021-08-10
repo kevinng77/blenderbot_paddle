@@ -56,7 +56,7 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
-    parser.add_argument("--torch_file_folder", type=str, default="=../../../下载")
+    parser.add_argument("--torch_file_folder", type=str, default="../../../下载")
 
     args = parser.parse_args()
 
