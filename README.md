@@ -58,6 +58,10 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 
 默认输出路径为 `./blenderbot-400M-distill/model_state.pdparams`
 
+转换后的paddle 权重下载链接：
+
+链接: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  密码: lgl5
+
 #### 精度校验
 
 ```shell
