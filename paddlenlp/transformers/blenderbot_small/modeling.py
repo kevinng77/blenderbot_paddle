@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import numpy as np
 import math
 import paddle
@@ -28,7 +29,6 @@ __all__ = [
 
 
 # Copied from paddlenlp.transformers.bart.modeling.shift_tokens_right
-# with Blenderbot -> BlenderbotSmall
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
@@ -39,8 +39,7 @@ def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     return shifted_input_ids
 
 
-# Copied from paddlenlp.transformers.blenderbot.modeling.BlenderbotLearnedPositionalEmbedding
-# with Blenderbot -> BlenderbotSmall
+
 class BlenderbotSmallLearnedPositionalEmbedding(Embedding):
     def __init__(self, num_embeddings, embedding_dim, padding_idx=None):
         super().__init__(
@@ -66,52 +65,33 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
     model_config_file = "model_config.json"
     pretrained_init_configuration = {
         "blenderbot_small-90M": {
-            "attention_dropout": 0.0,
+            "vocab_size": 54944,
             "bos_token_id": 1,
+            "pad_token_id": 0,
+            "eos_token_id": 2,
+            "decoder_start_token_id": 1,
             "d_model": 512,
+            "num_encoder_layers": 8,
+            "num_decoder_layers": 8,
+            "encoder_attention_heads": 16,
             "decoder_attention_heads": 16,
             "decoder_ffn_dim": 2048,
-            "num_decoder_layers": 8,
-            "decoder_start_token_id": 1,
-            "dropout": 0.1,
-            "encoder_attention_heads": 16,
             "encoder_ffn_dim": 2048,
-            "num_encoder_layers": 8,
-            "eos_token_id": 2,
+            "dropout": 0.1,
+            "activation_function": "gelu",
             "init_std": 0.02,
             "max_position_embeddings": 512,
-            "pad_token_id": 0,
-            "scale_embedding": True,  # BlenderSmall do embedding scale
-            "vocab_size": 54944
-        },
-        "blenderbot-90M": {
             "attention_dropout": 0.0,
-            "bos_token_id": 1,
-            "d_model": 512,
-            "decoder_attention_heads": 16,
-            "decoder_ffn_dim": 2048,
-            "num_decoder_layers": 8,
-            "decoder_start_token_id": 1,
-            "dropout": 0.1,
-            "encoder_attention_heads": 16,
-            "encoder_ffn_dim": 2048,
-            "num_encoder_layers": 8,
-            "eos_token_id": 2,
-            "init_std": 0.02,
-            "max_position_embeddings": 512,
-            "pad_token_id": 0,
+            "activation_dropout": 0.0,
             "scale_embedding": True,
-            "vocab_size": 54944
-        }
+            "normalize_before": False,
+        },
     }
     resource_files_names = {"model_state": "model_state.pdparams"}
     pretrained_resource_files_map = {
-        # TODO 更改链接格式
         "model_state": {
             "blenderbot_small-90M":
                 "blenderbot_small-90M/model_state.pdparams",
-            "blenderbot-90M":
-                "blenderbot-90M/model_state.pdparams",
         }
     }
     base_model_prefix = "blenderbot_small"
@@ -146,6 +126,7 @@ class BlenderbotSmallEncoder(BlenderbotSmallPretrainedModel):
                  max_position_embeddings=1024,
                  init_std=0.02,
                  scale_embedding=True,
+                 normalize_before=False
                  ):
         super().__init__()
         self.init_std = init_std
@@ -167,7 +148,7 @@ class BlenderbotSmallEncoder(BlenderbotSmallPretrainedModel):
             activation=activation_function,
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
-            normalize_before=False
+            normalize_before=normalize_before
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
         self.apply(self.init_weights)
@@ -210,7 +191,8 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
                  activation_dropout=0.1,
                  max_position_embeddings=1024,
                  init_std=0.02,
-                 scale_embedding=True):
+                 scale_embedding=True,
+                 normalize_before=False):
         super().__init__()
         self.init_std = init_std
         if embed_tokens is not None:
@@ -232,7 +214,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
             activation=activation_function,
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
-            normalize_before=False)
+            normalize_before=normalize_before)
         self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
         self.apply(self.init_weights)
 
@@ -251,13 +233,12 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
                     dtype=paddle.get_default_dtype())),
                 1)
         decoder_inputs_embeds = self.embed_tokens(decoder_input_ids) * self.embed_scale
-        decoder_inputs_embed_pos = self.decoder_embed_positions(
-            decoder_input_ids.shape)
-        # Different from BLenderbot, BlenderbotSmall Apply layer norm on hidden_states
+        decoder_inputs_embed_pos = self.decoder_embed_positions(decoder_input_ids.shape)
+
+        # Different from BLenderbot, BlenderbotSmall Apply layer norm on decoder_inputs_embeds
         decoder_inputs_embeds = self.decoder_layernorm_embedding(decoder_inputs_embeds)
 
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
-
         decoder_input = self.decoder_dropout(hidden_states)
 
         decoder_output = self.decoder(
@@ -271,9 +252,6 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
 
 @register_base_model
 class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
-    """
-    """
-
     def __init__(self,
                  vocab_size,
                  bos_token_id=1,
@@ -293,7 +271,8 @@ class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
                  activation_dropout=0.0,
                  max_position_embeddings=512,
                  init_std=0.02,
-                 scale_embedding=True
+                 scale_embedding=True,
+                 normalize_before=False
                  ):
         super().__init__()
         self.init_std = init_std
@@ -304,13 +283,13 @@ class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
             self.shared, vocab_size, pad_token_id, d_model, num_encoder_layers,
             encoder_attention_heads, encoder_ffn_dim, dropout,
             activation_function, attention_dropout, activation_dropout,
-            max_position_embeddings, init_std, scale_embedding)
+            max_position_embeddings, init_std, scale_embedding, normalize_before)
 
         self.decoder = BlenderbotSmallDecoder(
             self.shared, vocab_size, pad_token_id, d_model, num_decoder_layers,
             decoder_attention_heads, decoder_ffn_dim, dropout,
             activation_function, attention_dropout, activation_dropout,
-            max_position_embeddings, init_std, scale_embedding)
+            max_position_embeddings, init_std, scale_embedding, normalize_before)
         self.apply(self.init_weights)
 
     def forward(self,
@@ -320,9 +299,7 @@ class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
                 decoder_attention_mask=None,
                 encoder_output=None,
                 cache=None):
-        # TODO check
-        # automatically creates decoder_input_ids from
-        # inputBlenderbotSmallForSequenceClassification_ids if no decoder_input_ids are provided
+        # automatically creates decoder_input_ids
         if decoder_input_ids is None:
             decoder_input_ids = shift_tokens_right(input_ids,
                                                    self.decoder_start_token_id)

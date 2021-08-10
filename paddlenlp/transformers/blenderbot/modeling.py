@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import numpy as np
 import math
 import paddle
@@ -29,7 +30,6 @@ __all__ = [
 
 
 # Copied from .paddlenlp.transformers.bart.modeling.shift_tokens_right
-# with Blenderbot -> BlenderbotSmall
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
@@ -37,7 +37,6 @@ def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     shifted_input_ids = paddle.zeros_like(input_ids)
     shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
     shifted_input_ids[:, 0] = decoder_start_token_id
-
     return shifted_input_ids
 
 
@@ -208,7 +207,6 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
         inputs_embed_pos = self.encoder_embed_positions(input_ids.shape)
 
         hidden_states = inputs_embeds + inputs_embed_pos
-
         encoder_input = self.encoder_dropout(hidden_states)
 
         if attention_mask is None:
@@ -278,11 +276,9 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                     dtype=paddle.get_default_dtype())),
                 1)
         decoder_inputs_embeds = self.embed_tokens(decoder_input_ids) * self.embed_scale
-        decoder_inputs_embed_pos = self.decoder_embed_positions(
-            decoder_input_ids.shape)
+        decoder_inputs_embed_pos = self.decoder_embed_positions(decoder_input_ids.shape)
 
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
-
         decoder_input = self.decoder_dropout(hidden_states)
 
         decoder_output = self.decoder(
@@ -313,8 +309,8 @@ class BlenderbotModel(BlenderbotPretrainedModel):
                  decoder_ffn_dim=3072,
                  dropout=0.1,
                  activation_function='gelu',
-                 attention_dropout=0.1,
-                 activation_dropout=0.1,
+                 attention_dropout=0.0,
+                 activation_dropout=0.0,
                  max_position_embeddings=1024,
                  init_std=0.02,
                  scale_embedding=True,
@@ -344,8 +340,7 @@ class BlenderbotModel(BlenderbotPretrainedModel):
                 decoder_attention_mask=None,
                 encoder_output=None,
                 cache=None):
-        # different to other models, Blenderbot automatically creates decoder_input_ids from
-        # inputBartForSequenceClassification_ids if no decoder_input_ids are provided
+        # Blenderbot automatically creates decoder_input_ids
         if decoder_input_ids is None:
             decoder_input_ids = shift_tokens_right(input_ids,
                                                    self.decoder_start_token_id)
@@ -363,6 +358,8 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         return decoder_output
 
 
+# Copied from .paddlenlp.transformers.bart.modeling.BartForConditionalGeneration
+# with Bart -> Blenderbot
 class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
     def __init__(self, blenderbot):
         super().__init__()
@@ -392,3 +389,4 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
             transpose_y=True) + self.final_logits_bias
 
         return lm_logits
+
