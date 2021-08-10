@@ -96,3 +96,7 @@ python model_check.py --model_name=blenderbot_small-90M
 | add_final_layer_norm | False     | True   |
 | normalize_embedding  | True      | False  |
 
++ `normalize_before` 对应 `nn.TransformerEncoderLayer` 的 `normalize_before` 参数
+
++ `normalize_embedding` True 时， enocder 与 decoder 在执行完 token 到 embedding的转换后，会对`input_embeds` 进行 layer norm。可参考blenderbot small modeling代码中的238行左右。
++ `add_final_layer_norm` 为True时，会在encoder 与 decoder结束后，会对encoder_output/decoder_output 进行layer norm。具体可参考 blenderbot 220行左右代码。
