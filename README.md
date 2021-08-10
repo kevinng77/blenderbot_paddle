@@ -106,7 +106,9 @@ python model_check.py --model_name=blenderbot_small-90M
 {"length_penalty": 0.65,
   "max_length": 60,
   "min_length": 20,
-  "num_beams": 10,}
+  "num_beams": 10,
+  "force_bos_token_to_be_generated": false,
+  "forced_eos_token_id": 2,}
 ```
 
 以下这些 config 文件中的参数没有在 paddle 中设置：
@@ -120,6 +122,9 @@ python model_check.py --model_name=blenderbot_small-90M
   "static_position_embeddings": false,
   "use_cache": true,
   "num_hidden_layers": 2,
+  "layernorm_variant": "prelayernorm",
+  "is_encoder_decoder": true,
+  "encoder_no_repeat_ngram_size": 3,
 }
 ```
 
