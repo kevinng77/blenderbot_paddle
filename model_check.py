@@ -37,12 +37,12 @@ def run_check(model_name):
         print(f"huggingface {'facebook/' + model_name} vs paddle {model_name}")
         print(f"input text: {t}")
         print("mean difference:", torch.mean(torch.abs(pt_outputs - pd_outputs)))
-        print("max difference:", torch.mean(torch.max(pt_outputs - pd_outputs)))
+        print("max difference:", torch.max(torch.abs(pt_outputs - pd_outputs)))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default='blenderbot-400M-distill',
+    parser.add_argument("--model_name", type=str, default='blenderbot_small-90M',
                         help="blenderbot_small-90M or blenderbot-400M-distill")
     args = parser.parse_args()
     model_name = args.model_name

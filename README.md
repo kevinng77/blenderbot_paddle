@@ -74,7 +74,7 @@ python model_check.py --model_name=blenderbot-400M-distill
 python model_check.py --model_name=blenderbot_small-90M
 ```
 
-![image-20210809182647118](img/README/image-20210809182647118.png)
+![image-20210810120030476](img/README/image-20210810120030476.png)
 
 对官方给出的例句与随意例句，前向传导后的logits误差都在1E-5级别。
 
