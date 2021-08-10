@@ -15,7 +15,6 @@
 from collections import OrderedDict
 import argparse
 import re
-import pickle
 import torch
 import paddle
 
@@ -47,15 +46,15 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
             tw_offset = ""
             pw_offset = ""
         for huggingface_name, paddle_name in mapping.items():
-            k = re.sub(tw_offset + huggingface_name,
-                       pw_offset + paddle_name, k)
-        paddle_state_dict[k] = v.data.numpy().astype('float32')
+            k = re.sub(tw_offset + huggingface_name, pw_offset + paddle_name, k)
+
+        paddle_state_dict[k] = v.data.numpy()
     paddle.save(paddle_state_dict, paddle_dump_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
+    parser.add_argument("--model_name", type=str, default="blenderbot-400M-distill")
     parser.add_argument("--torch_file_folder", type=str, default="../../../下载")
 
     args = parser.parse_args()
@@ -67,7 +66,8 @@ if __name__ == "__main__":
         model = "blenderbot_small"
     elif args.model_name in ["blenderbot-400M-distill", "blenderbot-1B-distill", "blenderbot-3B"]:
         model = "blenderbot"
-
+    else:
+        assert f"{args.model_name} not find"
     print('converting ', args.model_name)
     print('loading from ', pytorch_checkpoint_path)
     print('output path ', paddle_dump_path)
@@ -97,6 +97,7 @@ if __name__ == "__main__":
         "embed_tokens": "embed_tokens",
         "layer_norm": "encoder_layernorm"
     }
+
     other_maps = {
         "final_logits_bias": "final_logits_bias",
         "lm_head.weight": "lm_head_weight",
@@ -105,11 +106,9 @@ if __name__ == "__main__":
 
     skip_weights = []
     dont_transpose = [
-        "_embeddings.weight",
-        "_layer_norm",
+        "_embeddings.weight","_layer_norm",
         "embed_positions", "embed_tokens", "layernorm_embedding",
         "lm_head", "shared"
     ]
 
-    convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
-                                         paddle_dump_path)
+    convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,paddle_dump_path)
