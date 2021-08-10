@@ -4,6 +4,3 @@ colorlog
 colorama
 seqeval
 multiprocess
-torch=1.7.1
-transformers=4.9.1
-paddlepaddle=2.1.2

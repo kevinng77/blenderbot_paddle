@@ -6,7 +6,21 @@
 
 本次复现的模型为 Blenderbot（对应论文中2.7B模型 ） 与 Blenderbot small （对应论文中90M模型)）
 
-### tokenizer核对
+#### 环境依赖
+
+```
+pip install -r requirements.txt
+```
+
+如果要进行权重转换及模型前向传导测试，还需安装torch与transformers。本次使用的依赖版本如下
+
+```python
+torch=1.7.1
+transformers=4.9.1
+paddlepaddle=2.1.2
+```
+
+#### tokenizer核对
 
 > 本仓库实现了 tokenizer与transformers 的对齐
 
@@ -88,13 +102,13 @@ python model_check.py --model_name=blenderbot_small-90M
 
 `blenderbot-3B ` 的权重是在太大了，在个人电脑上跑不动，因此也就没有做前向传导的对比测试了。
 
-#### 注重点
+#### 两个模型的对比注重点
 
-|                      | small-90M | normal |
-| -------------------- | --------- | ------ |
-| Normalize_before     | False     | True   |
-| add_final_layer_norm | False     | True   |
-| normalize_embedding  | True      | False  |
+| Hugging face 中的 config 不同 | small-90M | normal |
+| ----------------------------- | --------- | ------ |
+| Normalize_before              | False     | True   |
+| add_final_layer_norm          | False     | True   |
+| normalize_embedding           | True      | False  |
 
 + `normalize_before` 对应 `nn.TransformerEncoderLayer` 的 `normalize_before` 参数
 + `normalize_embedding` True 时， enocder 与 decoder 在执行完 token 到 embedding的转换后，会对`input_embeds` 进行 layer norm。可参考blenderbot small modeling代码中的238行左右。
