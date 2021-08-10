@@ -64,6 +64,8 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 
 #### 精度校验
 
+官方要求的 `blenderbot-400M-distill` 与 `blenderbot_small-90M` 模型校验：
+
 ```shell
 python model_check.py --model_name=blenderbot-400M-distill
 ```
@@ -76,7 +78,15 @@ python model_check.py --model_name=blenderbot_small-90M
 
 ![image-20210810120030476](img/README/image-20210810120030476.png)
 
-对官方给出的例句与随意例句，前向传导后的logits误差都在1E-5级别。
+对 transformers 上给出的例句与随意例句，前向传导后的logits误差都在1E-5级别。
+
+其他两个模型的前向传导检验:
+
+`blenderbot-1B-distill`
+
+![image-20210810125823870](img/README/image-20210810125823870.png)
+
+`blenderbot-3B ` 的权重是在太大了，在个人电脑上跑不动，因此也就没有做前向传导的对比测试了。
 
 #### 注重点
 
