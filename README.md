@@ -97,6 +97,36 @@ python model_check.py --model_name=blenderbot_small-90M
 | normalize_embedding  | True      | False  |
 
 + `normalize_before` 对应 `nn.TransformerEncoderLayer` 的 `normalize_before` 参数
-
 + `normalize_embedding` True 时， enocder 与 decoder 在执行完 token 到 embedding的转换后，会对`input_embeds` 进行 layer norm。可参考blenderbot small modeling代码中的238行左右。
 + `add_final_layer_norm` 为True时，会在encoder 与 decoder结束后，会对encoder_output/decoder_output 进行layer norm。具体可参考 blenderbot 220行左右代码。
+
+**hugging face config 文件中，生成文本的相关配置没有加载进来，如：**
+
+```python
+{"length_penalty": 0.65,
+  "max_length": 60,
+  "min_length": 20,
+  "num_beams": 10,}
+```
+
+以下这些 config 文件中的参数没有在 paddle 中设置：
+
+```python
+{
+  "classif_dropout": 0.0,
+  "decoder_layerdrop": 0.0,
+  "encoder_layerdrop": 0.0,
+  "do_blenderbot_90_layernorm": true, 
+  "static_position_embeddings": false,
+  "use_cache": true,
+  "num_hidden_layers": 2,
+}
+```
+
+对于： `do_lenderbot_90_layernorm` 一项，在transformers 的 [configuration文件](https://huggingface.co/transformers/v3.4.0/_modules/transformers/configuration_blenderbot.html) 中有提及，但在 transformers.model.blenderbot 中并没有找到相关应用。 部分网友有对这个参数进行[描述](https://gist.github.com/sshleifer/cb245b8739420724a32fc0c22344aee0) 但并没有在transformers中对应上，不知道是不是版本问题导致的。
+
+Blenderbot与BlenderbotSmall在Transformers 中的 `use_cache` 参数为 True，与paddle `TransformersDecoder`/ `TransformersEncoder` 的默认计算方法一致。
+
+decoder_layerdrop，encoder_layerdrop 两个模型均为0，因为 paddle 中的  `TransformersDecoder`/ `TransformersEncoder` 似乎没有layer drop的设置,（不太确定，因为个人没找到相关layer drop的设置）所以此时不传递这个参数并没有影响。
+
+`classif_dropout` 在  transformers.model.blenderbot中也是没有找到相关的应用
