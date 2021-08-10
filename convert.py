@@ -47,14 +47,14 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
             pw_offset = ""
         for huggingface_name, paddle_name in mapping.items():
             k = re.sub(tw_offset + huggingface_name, pw_offset + paddle_name, k)
-
-        paddle_state_dict[k] = v.data.numpy()
+        # print(v.dtype)
+        paddle_state_dict[k] = v.data.numpy().astype('float32')
     paddle.save(paddle_state_dict, paddle_dump_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="blenderbot-400M-distill")
+    parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
     parser.add_argument("--torch_file_folder", type=str, default="../../../下载")
 
     args = parser.parse_args()
