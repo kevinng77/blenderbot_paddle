@@ -109,7 +109,7 @@ python convert.py --model_name=blenderbot-3B --torch_file_folder=../../../下载
 
 官方要求的 `blenderbot-400M-distill` 与 `blenderbot_small-90M` 模型校验：
 
-因为这两个主要的权重在 hugging face 都为 float32格式，因此本测试代码也使用float32作为默认dtype。所以对于一下测试权重，**请使用 float32对他们进行转换。**
+因为这两个主要的权重在 hugging face 都为 float32格式，因此本测试代码也使用float32作为默认dtype。所以对于一下测试权重，**在上一步中请使用 float32对他们进行权重转换。**
 
 ```shell
 python model_check.py --model_name=blenderbot-400M-distill
