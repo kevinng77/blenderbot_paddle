@@ -8,6 +8,8 @@
 
 #### 环境依赖
 
+本次使用的python版本为3.7
+
 ```
 pip install -r requirements.txt
 ```
@@ -84,14 +86,14 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 注意：model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
 
 ```python
- python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
+python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
 ```
 
 程序会从 `--torch_file_folder/model_name/pytorch_model.bin` 加载torch 权重，以上面代码为例，加载路径为 `../../../下载/blenderbot-400M-distill/pytorch_model.bin`
 
 默认输出路径为 `./blenderbot-400M-distill/model_state.pdparams`
 
-转换后的paddle 权重下载链接：
+转换后的 paddle 权重下载链接：
 
 链接: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  密码: lgl5
 
