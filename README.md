@@ -15,9 +15,16 @@ pip install -r requirements.txt
 如果要进行权重转换及模型前向传导测试，还需安装torch与transformers。本次使用的依赖版本如下
 
 ```python
-torch=1.7.1
-transformers=4.9.1
-paddlepaddle=2.1.2
+torch==1.7.1
+transformers==4.9.1
+paddlepaddle==2.1.2
+```
+
+相关链接：
+
+```
+pip install torch==1.7.1+cpu torchvision==0.8.2+cpu torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+python -m pip install paddlepaddle -i https://mirror.baidu.com/pypi/simple
 ```
 
 #### tokenizer核对
@@ -62,10 +69,10 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 
 #### 权重转换
 
-将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要模型到对应的目录下。
+将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要模型到对应的目录下。注意：model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
 
 ```python
- python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
+ python convert.py --model_name=blenderbot_small-90M --torch_file_folder=../../../下载
 ```
 
 程序会从 `--torch_file_folder/model_name/pytorch_model.bin` 加载torch 权重，以上面代码为例，加载路径为 `../../../下载/blenderbot-400M-distill/pytorch_model.bin`
