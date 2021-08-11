@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import shutil
 from functools import lru_cache
@@ -80,7 +81,7 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
                 "blenderbot-90M/merges.txt"
         }
     }
-    pretrained_init_configuration = {"blenderbot_small-90M": {}, "blenderbot-90M": {}}
+    pretrained_init_configuration = {"blenderbot_small-90M": {}}
 
     def __init__(
             self,
@@ -236,15 +237,6 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
     def convert_tokens_to_string(self, tokens):
         return " ".join(tokens).replace("@@ ", "").strip()
 
-    def convert_ids_to_tokens(self, ids, skip_special_tokens=False):
-        tokens = []
-        for i in ids:
-            if i in self.special_tokens_decoder:
-                if not skip_special_tokens:
-                    tokens.append(self.special_tokens_decoder[i])
-            else:
-                tokens.append(self.decoder[i])
-        return tokens
 
     def convert_ids_to_string(self, ids):
         text = ''.join([self.decoder[id] for id in ids])
