@@ -29,7 +29,7 @@ python -m pip install paddlepaddle -i https://mirror.baidu.com/pypi/simple
 
 #### tokenizer核对
 
-> 本仓库实现了 tokenizer与transformers 的对齐
+本仓库实现了 tokenizer与transformers 的对齐，因 BlenderbotSmall 与 Blenderbot 的tokenize方式有所不同，如采用的 BPE 细节等。因此并没有将他们合并成一个tokenizer。
 
 核对 blenderbotsmall 的tokenizer
 
@@ -69,7 +69,19 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 
 #### 权重转换
 
-将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要模型到对应的目录下。注意：model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
+将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要讲hugging face的模型权重下载到对应的目录下。
+
+以下提供他们的下载链接：
+
+[blenderbot_small-90M](https://huggingface.co/facebook/blenderbot_small-90M/tree/main)
+
+[blenderbot-400M-distill](https://huggingface.co/facebook/blenderbot-400M-distill/tree/main)
+
+[blenderbot-1B-distill](https://huggingface.co/facebook/blenderbot-1B-distill/tree/main)
+
+[blenderbot-3B-distill](https://huggingface.co/facebook/blenderbot-3B/tree/main)
+
+注意：model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
 
 ```python
  python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
