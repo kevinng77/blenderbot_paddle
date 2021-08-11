@@ -47,8 +47,7 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
             pw_offset = ""
         for huggingface_name, paddle_name in mapping.items():
             k = re.sub(tw_offset + huggingface_name, pw_offset + paddle_name, k)
-        # print(v.dtype)
-        paddle_state_dict[k] = v.data.numpy().astype('float32')
+        paddle_state_dict[k] = v.data.numpy().astype(args.dtype)
     paddle.save(paddle_state_dict, paddle_dump_path)
 
 
@@ -56,9 +55,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
     parser.add_argument("--torch_file_folder", type=str, default="../../../下载")
+    parser.add_argument('--dtype',type=str,default='float32',help="float32 or float16")
 
     args = parser.parse_args()
-
+    assert args.dtype in ['float32','float16'],f"{args.dtype} not in float32 or float16"
     pytorch_checkpoint_path = f"{args.torch_file_folder}/{args.model_name}/pytorch_model.bin"
     paddle_dump_path = f"./{args.model_name}/model_state.pdparams"
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     elif args.model_name in ["blenderbot-400M-distill", "blenderbot-1B-distill", "blenderbot-3B"]:
         model = "blenderbot"
     else:
-        assert f"{args.model_name} not find"
+        raise f"{args.model_name} not find"
     print('converting ', args.model_name)
     print('loading from ', pytorch_checkpoint_path)
     print('output path ', paddle_dump_path)

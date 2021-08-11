@@ -83,7 +83,7 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 
 [blenderbot-3B-distill](https://huggingface.co/facebook/blenderbot-3B/tree/main)
 
-注意：model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
+**注意：**model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
 
 ```python
 python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
@@ -93,13 +93,23 @@ python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../..
 
 默认输出路径为 `./blenderbot-400M-distill/model_state.pdparams`
 
-转换后的 paddle 权重下载链接：
+**注意：** hugging face上 `blenderbot-400M-distill`  与`blenderbot_small-90M` 的权重采用的是float32，而 `blenderbot-1B-distill` , `blenderbot-3B` 采用的是 float16， 转换时候可以提供 `--dtype` 参数来控制保存的格式，如：
+
+```shell
+python convert.py --model_name=blenderbot-3B --torch_file_folder=../../../下载 --dtype=float16
+```
+
+由于3B 权重太大，因此只转换了float16的版本。
+
+转换后的 paddle 权重下载链接 (float16的权重在文件夹末尾会注明float16)：
 
 链接: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  密码: lgl5
 
 #### 精度校验
 
 官方要求的 `blenderbot-400M-distill` 与 `blenderbot_small-90M` 模型校验：
+
+因为这两个主要的权重在 hugging face 都为 float32格式，因此本测试代码也使用float32作为默认dtype。所以对于一下测试权重，**请使用 float32对他们进行转换。**
 
 ```shell
 python model_check.py --model_name=blenderbot-400M-distill
@@ -119,9 +129,23 @@ python model_check.py --model_name=blenderbot_small-90M
 
 `blenderbot-1B-distill`
 
+```shell
+python model_check.py --model_name=blenderbot-1B-distill
+```
+
 ![image-20210810125823870](img/README/image-20210810125823870.png)
 
 `blenderbot-3B ` 的权重是在太大了，在个人电脑上跑不动，因此也就没有做前向传导的对比测试了。
+
+#### 关于 float16的测试：
+
+因为个人对 paddle 还不是很熟悉，在尝试使用 float16 格式进行测试时候遇到了一下bug，还在处理中Q.Q.
+
+```
+RuntimeError: (NotFound) Operator lookup_table_v2 does not have kernel for data_type[::paddle::platform::float16]:data_layout[ANY_LAYOUT]:place[CPUPlace]:library_type[PLAIN].
+  [Hint: Expected kernel_iter != kernels.end(), but received kernel_iter == kernels.end().] (at /paddle/paddle/fluid/imperative/prepared_operator.cc:135)
+  [operator < lookup_table_v2 > error]
+```
 
 #### 两个模型的对比注重点
 
