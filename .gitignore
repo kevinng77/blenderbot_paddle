@@ -1,9 +1,8 @@
-.history/
-.idea/
-bert/
+.history
+.idea
 compare/
 */*.bin
-*/model_state.pdparams
+model_state.pdparams
 param_check.py
 
 # Byte-compiled / optimized / DLL files

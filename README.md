@@ -1,39 +1,141 @@
-# blenderbot_paddle
+# Blenderbot
 
-用Paddle复现[Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf)论文
+English | [简体中文](README_cn.md)
 
-开放式的聊天系统一直是机械学习/深度学习领域的一个巨大挑战。Blenderbot一文展示了大规模模型在对训练数据和对话生成方式进行合理选择后，可以在对话中做到强调重点，保持对话个性与聊天基调等。
+* [Blenderbot](#blenderbot)
+   * [1.Introduction](#1introduction)
+   * [2. Requirments](#2-requirments)
+   * [3. Example](#3-example)
+   * [4. Code and reproduce details](#4-code-and-reproduce-details)
+      * [4.1 Code overview](#41-code-overview)
+   * [4.2 Convert model weight](#42-convert-model-weight)
+   * [4.3 Model Verify](#43-model-verify)
+      * [Verify Tokenizer](#verify-tokenizer)
+      * [Verify Model Forward Consistency](#verify-model-forward-consistency)
+   * [4.4 Others](#44-others)
+   * [5.Model Information](#5model-information)
 
-本次复现的模型为 Blenderbot（对应论文中2.7B模型 ） 与 Blenderbot small （对应论文中90M模型)）
+## 1.Introduction
 
-#### 环境依赖
+Open-domain chatbots is a challenging in Machine Learning/ Deep Learning fields. The experiment in [Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf) shows that chatbot is able to emphasize key points, maintaining a consistent persona under appropriate training and generating methods. 
 
-本次使用的python版本为3.7
+Blenderbot Generator applied traditional Seq2Seq Transformer architecture, this repository reproduced **Blenderbot** (referred to model with 2.7B parameters) and **BlenderbotSmall** (referred to model with 90M parameters) in  [Recipes for building an open-domain chatbot](https://aclanthology.org/2021.eacl-main.24.pdf) using PaddlePaddle.
 
-```
+## 2. **Requirements**
+
+This repo use `python==3.7` and `paddlepaddle==2.1.2`, both model forward test and weight converting are done in CPU mode.
+
+**Install paddle and paddlenlp relevant requirements.**
+
+```shell
 pip install -r requirements.txt
-```
-
-如果要进行权重转换及模型前向传导测试，还需安装torch与transformers。本次使用的依赖版本如下
-
-```python
-torch==1.7.1
-transformers==4.9.1
-paddlepaddle==2.1.2
-```
-
-相关链接：
-
-```
-pip install torch==1.7.1+cpu torchvision==0.8.2+cpu torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 python -m pip install paddlepaddle -i https://mirror.baidu.com/pypi/simple
 ```
 
-#### tokenizer核对
+To conduct weight converting and forward test, torch and transformers are needed:
 
-本仓库实现了 tokenizer与transformers 的对齐，因 BlenderbotSmall 与 Blenderbot 的tokenize方式有所不同，如采用的 BPE 细节等。因此并没有将他们合并成一个tokenizer。
+```shell
+torch==1.7.1
+transformers==4.9.1
+```
 
-核对 blenderbotsmall 的tokenizer
+useful links:
+
+```shell
+pip install torch==1.7.1+cpu torchvision==0.8.2+cpu torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+## 3. Example
+
+For BlenderbotSmall:
+
+```python
+from paddlenlp.transformers import BlenderbotSmallTokenizer,BlenderbotSmallForConditionalGeneration
+model_name = "blenderbot_small-90M"
+
+# load pretrained model
+tokneizer = BlenderbotSmallTokenizer.from_pretrained(model_name)
+model = BlenderbotSmallForConditionalGeneration.from_pretrained(model_name)
+
+text = "it is a nice day today!" 
+inputs = tokenizer(text)
+input_tensor = paddle.to_tensor([inputs["input_ids"]])
+
+logits = model(input_tensor)
+```
+
+For Blenderbot:
+
+```python
+from paddlenlp.transformers import BlenderbotTokenizer,BlenderbotForConditionalGeneration
+model_name = "blenderbot-400M-distill"
+
+tokneizer = BlenderbotTokenizer.from_pretrained(model_name)
+model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
+
+text = "it is a nice day today!" 
+inputs = tokenizer(text)
+input_tensor = paddle.to_tensor([inputs["input_ids"]])
+
+logits = model(input_tensor)
+```
+
+other model_name options:  `blenderbot-1B-distill`,  `blenderbot-3B`. 
+
+## 4. Code and reproduce details
+
+### 4.1 Code overview
+
+```c
+.
+├── data
+│   └── blenderbot_small-90M        //pretrain weight and vocab store path
+├── paddlenlp                       //paddlenlp library
+│   └── transformers
+│       ├── blenderbot              //blenderbot - referred to 2.7B model
+│       │   ├── modeling.py         //model
+│       │   └── tokenizer.py        //blenderbot tokenizer
+│       └── blenderbot_small        //blenderbot_small - referred to 90Mmodel
+│           ├── modeling.py
+│           └── tokenizer.py
+├── img                             //Readme image path
+├── README.md                       //Readme in English
+├── README_cn.md                    //Readme in Chinese
+├── requirements.txt                //paddlenlp relevant requirements
+├── model_check.py                  //forward accuracy check
+├── convert.py                      //file for convert weight
+└── tokenizer_check.py              //tokenizer consistency check
+```
+
+## 4.2 Convert model weight
+
+Convert pretrained model weight from  [Hugging Face](https://huggingface.co/models?search=blender), the model to convert is [blenderbot_small-90M](https://huggingface.co/facebook/blenderbot_small-90M/tree/main), [blenderbot-400M-distill](https://huggingface.co/facebook/blenderbot-400M-distill/tree/main), [blenderbot-1B-distill](https://huggingface.co/facebook/blenderbot-1B-distill/tree/main), and [blenderbot-3B](https://huggingface.co/facebook/blenderbot-3B/tree/main). Please download the corresponding pretrained weight before convert them.
+
+Convert model weight for `blenderbot-400M-distill` :
+
+```
+python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../Download
+```
+
+**Notes:**
+
++ `--model_name` should be selected from：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`.
++ The code will load hugging face weight from  `--torch_file_folder/model_name/pytorch_model.bin`.  For instance, the loading path of above sample code is `../../../Download/blenderbot-400M-distill/pytorch_model.bin` . The default output path is `./data/blenderbot-400M-distill/model_state.pdparams`
++ For hugging face, `blenderbot-400M-distill`  and `blenderbot_small-90M` use float32 as the default dtype, while `blenderbot-1B-distill` , `blenderbot-3B` use float16. You might pass  `--dtype` parameter (default as float32) to modify the output dtype, for example:
+
+```shell
+python convert.py --model_name=blenderbot-3B --torch_file_folder=../../../Download --dtype=float16
+```
+
+links for converted paddle weight: 
+
+Baidu Drive: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  Password: lgl5
+
+## 4.3 Model Verify
+
+### Verify Tokenizer
+
+Verify Blenderbotsmall tokenizer
 
 ```
 python tokenizer_check.py --model_name=blenderbot_small-90M
@@ -44,14 +146,8 @@ python tokenizer_check.py --model_name=blenderbot_small-90M
 > torch tokenizer:  [42, 643, 46, 1430, 45, 52, 1176, 146, 177, 753, 2430, 5]
 >
 > paddle tokenizer:  [42, 643, 46, 1430, 45, 52, 1176, 146, 177, 753, 2430, 5]
->
-> input text: My 'but' they:@ eat too many carbs:)
->
-> torch tokenizer:  [42, 8, 45, 8, 2277, 332, 3, 6708, 1176, 146, 177, 753, 372, 330, 106, 39]
->
-> paddle tokenizer:  [42, 8, 45, 8, 2277, 332, 3, 6708, 1176, 146, 177, 753, 372, 330, 106, 39]
 
-核对 blenderbot 的 tokenizer
+Verify Blenderbot tokenizer
 
 ```
 python tokenizer_check.py --model_name=blenderbot-400M-distill
@@ -62,104 +158,46 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 > torch tokenizer:  [863, 1329, 366, 1449, 373, 382, 1861, 618, 847, 911, 1372, 21, 2]
 >
 > paddle tokenizer:  [863, 1329, 366, 1449, 373, 382, 1861, 618, 847, 911, 1372, 21, 2]
->
-> input text: My 'but' they:@ eat too many carbs:)
->
-> torch tokenizer:  [863, 1069, 2871, 14, 382, 33, 39, 1861, 618, 847, 911, 1372, 33, 16, 2]
->
-> paddle tokenizer:  [863, 1069, 2871, 14, 382, 33, 39, 1861, 618, 847, 911, 1372, 33, 16, 2]
 
-#### 权重转换
+### Verify Model Forward Propagation Consistency
 
-将 [Hugging Face](https://huggingface.co/models?search=blender) 上的 blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B 四个模型进行转换。转换前需要讲hugging face的模型权重下载到对应的目录下。
+Since the dtype of  `blenderbot-400M-distill` and `blenderbot_small-90M` is `float32`, to conduct the following test, please convert the corresponding weight with dtype `float32`.
 
-以下提供他们的下载链接：
+Verify  `blenderbot-400M-distill` 
 
-[blenderbot_small-90M](https://huggingface.co/facebook/blenderbot_small-90M/tree/main)
-
-[blenderbot-400M-distill](https://huggingface.co/facebook/blenderbot-400M-distill/tree/main)
-
-[blenderbot-1B-distill](https://huggingface.co/facebook/blenderbot-1B-distill/tree/main)
-
-[blenderbot-3B-distill](https://huggingface.co/facebook/blenderbot-3B/tree/main)
-
-**注意：**model_name 应该与hugging face上的模型权重名称一致，即：`blenderbot-400M-distill, blenderbot_small-90M, blenderbot-1B-distill, blenderbot-3B`
-
-```python
-python convert.py --model_name=blenderbot-400M-distill --torch_file_folder=../../../下载
 ```
-
-程序会从 `--torch_file_folder/model_name/pytorch_model.bin` 加载torch 权重，以上面代码为例，加载路径为 `../../../下载/blenderbot-400M-distill/pytorch_model.bin`
-
-默认输出路径为 `./blenderbot-400M-distill/model_state.pdparams`
-
-**注意：** hugging face上 `blenderbot-400M-distill`  与`blenderbot_small-90M` 的权重采用的是float32，而 `blenderbot-1B-distill` , `blenderbot-3B` 采用的是 float16， 转换时候可以提供 `--dtype` 参数来控制保存的格式，如：
-
-```shell
-python convert.py --model_name=blenderbot-3B --torch_file_folder=../../../下载 --dtype=float16
-```
-
-由于3B 权重太大，因此只转换了float16的版本。
-
-转换后的 paddle 权重下载链接 (float16的权重在文件夹末尾会注明float16)：
-
-链接: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  密码: lgl5
-
-#### 精度校验
-
-官方要求的 `blenderbot-400M-distill` 与 `blenderbot_small-90M` 模型校验：
-
-因为这两个主要的权重在 hugging face 都为 float32格式，因此本测试代码也使用float32作为默认dtype。所以对于一下测试权重，**在上一步中请使用 float32对他们进行权重转换。**
-
-```shell
 python model_check.py --model_name=blenderbot-400M-distill
 ```
 
 ![image-20210809182542119](img/README/image-20210809182542119.png)
 
-```shell
+Verify  `blenderbot_small-90M` 
+
+```
 python model_check.py --model_name=blenderbot_small-90M
 ```
 
 ![image-20210810120030476](img/README/image-20210810120030476.png)
 
-对 transformers 上给出的例句与随意例句，前向传导后的logits误差都在1E-5级别。
-
-其他两个模型的前向传导检验:
-
-`blenderbot-1B-distill`
-
-```shell
-python model_check.py --model_name=blenderbot-1B-distill
-```
+Verify `blenderbot-1B-distill`
 
 ![image-20210810125823870](img/README/image-20210810125823870.png)
 
-`blenderbot-3B ` 的权重是在太大了，在个人电脑上跑不动，因此也就没有做前向传导的对比测试了。
+## 4.4 Others
 
-#### 关于 float16的测试：
+**Blenderbot Vs. BlenderbotSmall**
 
-因为个人对 paddle 还不是很熟悉，在尝试使用 float16 格式进行测试时候遇到了一下bug，还在处理中Q.Q.
+| Parameters in Hugging face config file | BlenderbotSmall (Value) | Blenderbot (Value) |
+| -------------------------------------- | ----------------------- | ------------------ |
+| Normalize_before                       | False                   | True               |
+| add_final_layer_norm                   | False                   | True               |
+| normalize_embedding                    | True                    | False              |
 
-```
-RuntimeError: (NotFound) Operator lookup_table_v2 does not have kernel for data_type[::paddle::platform::float16]:data_layout[ANY_LAYOUT]:place[CPUPlace]:library_type[PLAIN].
-  [Hint: Expected kernel_iter != kernels.end(), but received kernel_iter == kernels.end().] (at /paddle/paddle/fluid/imperative/prepared_operator.cc:135)
-  [operator < lookup_table_v2 > error]
-```
++ `normalize_before` refers to `normalize_before` parameter in  `nn.TransformerEncoderLayer` .
++ When`normalize_embedding` is True, in encoder and decoder, the layer norm will be applied on `input_embeds` . Please referred to line 241 in `paddlenlp/transformers/blenderbot_small/modeling.py` for detail.
++ When `add_final_layer_norm` is True, in encoder and decoder, layer norm will be applied on encoder_output and decoder_output. Please referred to line 222 in `paddlenlp/transformers/blenderbot/modeling.py` for detail.
 
-#### 两个模型的对比注重点
-
-| Hugging face 中的 config 不同 | small-90M | normal |
-| ----------------------------- | --------- | ------ |
-| Normalize_before              | False     | True   |
-| add_final_layer_norm          | False     | True   |
-| normalize_embedding           | True      | False  |
-
-+ `normalize_before` 对应 `nn.TransformerEncoderLayer` 的 `normalize_before` 参数
-+ `normalize_embedding` True 时， enocder 与 decoder 在执行完 token 到 embedding的转换后，会对`input_embeds` 进行 layer norm。可参考blenderbot small modeling代码中的238行左右。
-+ `add_final_layer_norm` 为True时，会在encoder 与 decoder结束后，会对encoder_output/decoder_output 进行layer norm。具体可参考 blenderbot 220行左右代码。
-
-**hugging face config 文件中，生成文本的相关配置没有加载进来，如：**
+**Some parameters about generating the prediction result is not configured in this repo:**
 
 ```python
 {"length_penalty": 0.65,
@@ -170,7 +208,7 @@ RuntimeError: (NotFound) Operator lookup_table_v2 does not have kernel for data_
   "forced_eos_token_id": 2,}
 ```
 
-以下这些 config 文件中的参数没有在 paddle 中设置：
+Other parameters, which are not configured in this repo:
 
 ```python
 {
@@ -187,10 +225,18 @@ RuntimeError: (NotFound) Operator lookup_table_v2 does not have kernel for data_
 }
 ```
 
-对于： `do_lenderbot_90_layernorm` 一项，在transformers 的 [configuration文件](https://huggingface.co/transformers/v3.4.0/_modules/transformers/configuration_blenderbot.html) 中有提及，但在 transformers.model.blenderbot 中并没有找到相关应用。 部分网友有对这个参数进行[描述](https://gist.github.com/sshleifer/cb245b8739420724a32fc0c22344aee0) 但并没有在transformers中对应上，不知道是不是版本问题导致的。
+For `do_lenderbot_90_layernorm` , which is mentioned in transformers [configuration](https://huggingface.co/transformers/v3.4.0/_modules/transformers/configuration_blenderbot.html),  no related settings was found in `transformers.model.blenderbot` source code. You might refer to some [discussions](https://gist.github.com/sshleifer/cb245b8739420724a32fc0c22344aee0) about this parameter. 
 
-Blenderbot与BlenderbotSmall在Transformers 中的 `use_cache` 参数为 True，与paddle `TransformersDecoder`/ `TransformersEncoder` 的默认计算方法一致。
+The value for `decoder_layerdrop` and `encoder_layerdrop` are both 0, which is consistent with  `TransformersDecoder`/ `TransformersEncoder`  in paddlenlp.
 
-decoder_layerdrop，encoder_layerdrop 两个模型均为0，因为 paddle 中的  `TransformersDecoder`/ `TransformersEncoder` 似乎没有layer drop的设置,（不太确定，因为个人没找到相关layer drop的设置）所以此时不传递这个参数并没有影响。
+## 5.Model Information
 
-`classif_dropout` 在  transformers.model.blenderbot中也是没有找到相关的应用
+| Information Name     | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| Announcer            | kevin Wu                                                     |
+| Time                 | 2021.08                                                      |
+| Framework Version    | Paddle 2.1.2                                                 |
+| Application Scenario | NLP/ Dialogue                                                |
+| Supported Hardwares  | GPU、CPU                                                     |
+| Download Links       | [pretrained model weight Baidu Drive](https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA)  Password: lgl5 |
+
