@@ -8,10 +8,10 @@ English | [简体中文](README_cn.md)
    * [3. Example](#3-example)
    * [4. Code and reproduce details](#4-code-and-reproduce-details)
       * [4.1 Code overview](#41-code-overview)
-   * [4.2 Convert model weight](#42-convert-model-weight)
-   * [4.3 Model Verify](#43-model-verify)
-      * [Verify Tokenizer](#verify-tokenizer)
-      * [Verify Model Forward Consistency](#verify-model-forward-consistency)
+      * [4.2 Convert model weight](#42-convert-model-weight)
+      * [4.3 Model Verify](#43-model-verify)
+         * [Verify Tokenizer](#verify-tokenizer)
+         * [Verify Model Forward Consistency](#verify-model-forward-consistency)
    * [4.4 Others](#44-others)
    * [5.Model Information](#5model-information)
 
@@ -107,7 +107,7 @@ other model_name options:  `blenderbot-1B-distill`,  `blenderbot-3B`.
 └── tokenizer_check.py              //tokenizer consistency check
 ```
 
-## 4.2 Convert model weight
+### 4.2 Convert model weight
 
 Convert pretrained model weight from  [Hugging Face](https://huggingface.co/models?search=blender), the model to convert is [blenderbot_small-90M](https://huggingface.co/facebook/blenderbot_small-90M/tree/main), [blenderbot-400M-distill](https://huggingface.co/facebook/blenderbot-400M-distill/tree/main), [blenderbot-1B-distill](https://huggingface.co/facebook/blenderbot-1B-distill/tree/main), and [blenderbot-3B](https://huggingface.co/facebook/blenderbot-3B/tree/main). Please download the corresponding pretrained weight before convert them.
 
@@ -131,9 +131,9 @@ links for converted paddle weight:
 
 Baidu Drive: https://pan.baidu.com/s/1MGHSE4Q_mXEMuYT3CwzJiA  Password: lgl5
 
-## 4.3 Model Verify
+### 4.3 Model Verify
 
-### Verify Tokenizer
+#### Verify Tokenizer
 
 Verify Blenderbotsmall tokenizer
 
@@ -159,7 +159,7 @@ python tokenizer_check.py --model_name=blenderbot-400M-distill
 >
 > paddle tokenizer:  [863, 1329, 366, 1449, 373, 382, 1861, 618, 847, 911, 1372, 21, 2]
 
-### Verify Model Forward Propagation Consistency
+#### Verify Model Forward Propagation Consistency
 
 Since the dtype of  `blenderbot-400M-distill` and `blenderbot_small-90M` is `float32`, to conduct the following test, please convert the corresponding weight with dtype `float32`.
 
