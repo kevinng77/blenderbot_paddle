@@ -24,6 +24,7 @@ from paddle.utils import try_import
 __all__ = ['BlenderbotSmallTokenizer']
 
 
+# Copy from paddlenlp.transformers.gpt.tokenizer.bytes_to_unicode
 @lru_cache()
 def bytes_to_unicode():
     """
@@ -49,6 +50,7 @@ def bytes_to_unicode():
     return dict(zip(bs, cs))
 
 
+# Copy from paddlenlp.transformers.gpt.tokenizer.get_pairs
 def get_pairs(word):
     """Return set of symbol pairs in a word.
 
@@ -70,15 +72,11 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
     pretrained_resource_files_map = {
         "vocab_file": {
             "blenderbot_small-90M":
-                "blenderbot_small-90M/vocab.json",
-            "blenderbot-90M":
-                "blenderbot-90M/vocab.json"
+                "data/blenderbot_small-90M/vocab.json",
         },
         "merges_file": {
             "blenderbot_small-90M":
-                "blenderbot_small-90M/merges.txt",
-            "blenderbot-90M":
-                "blenderbot-90M/merges.txt"
+                "data/blenderbot_small-90M/merges.txt",
         }
     }
     pretrained_init_configuration = {"blenderbot_small-90M": {}}
@@ -114,11 +112,12 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
         bpe_merges = [tuple(merge.split()) for merge in bpe_data]
         self.bpe_ranks = dict(zip(bpe_merges, range(len(bpe_merges))))
         self.cache = {}
-        self.pat = r"\S+\n?"
+        self.pat = r"\S+\n?" # blenderbot small use different string match pattern from blenderbot
         self.unk_id = self.encoder[unk_token]
         self.special_tokens = {}
         self.special_tokens_decoder = {}
         self.set_special_tokens(special_tokens)
+        self.eol_token = eol_token
 
     def __len__(self):
         return len(self.encoder) + len(self.special_tokens)
@@ -146,7 +145,7 @@ class BlenderbotSmallTokenizer(PretrainedTokenizer):
         token = re.sub("(')", r" \1 ", token)
         token = re.sub(r"\s{2,}", " ", token)
         if "\n" in token:
-            token = token.replace("\n", " __newln__")
+            token = token.replace("\n", self.eol_token)
 
         tokens = token.split(" ")
         words = []

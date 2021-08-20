@@ -116,11 +116,11 @@ class BlenderbotPretrainedModel(PretrainedModel):
     pretrained_resource_files_map = {
         "model_state": {
             "blenderbot-3B":
-                "blenderbot-3B/model_state.pdparams",
+                "data/blenderbot-3B/model_state.pdparams",
             "blenderbot-1B-distill":
-                "blenderbot-1B-distill/model_state.pdparams",
+                "data/blenderbot-1B-distill/model_state.pdparams",
             "blenderbot-400M-distill":
-                "blenderbot-400M-distill/model_state.pdparams",
+                "data/blenderbot-400M-distill/model_state.pdparams",
         }
     }
 
@@ -269,6 +269,7 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                 decoder_attention_mask=None,
                 encoder_output=None,
                 memory_mask=None,
+                use_cache=False,
                 cache=None):
         if decoder_attention_mask is None:
             decoder_length = paddle.shape(decoder_input_ids)[-1]
@@ -283,6 +284,10 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
 
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
         decoder_input = self.decoder_dropout(hidden_states)
+
+        if use_cache:
+            if cache is None:
+                cache = self.decoder.gen_cache(memory=encoder_output)
 
         decoder_output = self.decoder(
             tgt=decoder_input,
@@ -321,6 +326,8 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         super().__init__()
         self.init_std = init_std
         self.pad_token_id = pad_token_id
+        self.bos_token_id = bos_token_id
+        self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
         self.shared = nn.Embedding(vocab_size, d_model, pad_token_id)
         self.encoder = BlenderbotEncoder(
@@ -337,11 +344,12 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         self.apply(self.init_weights)
 
     def forward(self,
-                input_ids,
+                input_ids=None,
                 attention_mask=None,
                 decoder_input_ids=None,
                 decoder_attention_mask=None,
                 encoder_output=None,
+                use_cache=False,
                 cache=None):
         # Blenderbot automatically creates decoder_input_ids
         if decoder_input_ids is None:
@@ -356,17 +364,17 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         memory_mask.stop_gradient = True
 
         decoder_output = self.decoder(decoder_input_ids, decoder_attention_mask,
-                                      encoder_output, memory_mask, cache)
+                                      encoder_output, memory_mask, use_cache, cache)
+        return decoder_output, encoder_output
 
-        return decoder_output
 
-
-# Copied from .paddlenlp.transformers.bart.modeling.BartForConditionalGeneration
-# with Bart -> Blenderbot
 class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
     def __init__(self, blenderbot):
         super().__init__()
         self.blenderbot = blenderbot
+        self.eos_token_id = blenderbot.eos_token_id
+        self.bos_token_id = blenderbot.bos_token_id
+        self.pad_token_id = blenderbot.pad_token_id
         self.lm_head_weight = self.create_parameter(
             shape=[
                 self.blenderbot.config['vocab_size'], self.blenderbot.config['d_model']
@@ -379,18 +387,44 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
         self.apply(self.init_weights)
 
     def forward(self,
-                input_ids,
+                input_ids=None,
                 attention_mask=None,
                 decoder_input_ids=None,
                 decoder_attention_mask=None,
                 encoder_output=None,
+                use_cache=False,
                 cache=None):
-        output = self.blenderbot(input_ids, attention_mask, decoder_input_ids,
-                                 decoder_attention_mask, encoder_output, cache)
+
+        decoder_outputs, encoder_output = self.blenderbot(
+            input_ids, attention_mask, decoder_input_ids,
+            decoder_attention_mask, encoder_output, use_cache, cache)
+
         lm_logits = paddle.tensor.matmul(
-            output if cache is None else output[0],
+            decoder_outputs[0] if use_cache else decoder_outputs,
             self.lm_head_weight,
             transpose_y=True) + self.final_logits_bias
 
+        if use_cache:
+            cache = decoder_outputs[1]
+            return lm_logits, cache
         return lm_logits
 
+    def prepare_inputs_for_generation(self,
+                                      decoder_input_ids,
+                                      attention_mask=None,
+                                      encoder_output=None,
+                                      use_cache=True,
+                                      cache=None,
+                                      **kwargs):
+
+        if cache is not None:
+            decoder_input_ids = decoder_input_ids[:, -1:].unsqueeze(-1)
+
+        return {
+            "input_ids": None,  # encoder_outputs is defined. input_ids not needed
+            "decoder_input_ids": decoder_input_ids,
+            "encoder_output": encoder_output,
+            "attention_mask": attention_mask,
+            "use_cache": use_cache,
+            "cache": cache
+        }

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from .. import GPTTokenizer
 from paddle.utils import try_import
 
@@ -25,22 +26,18 @@ class BlenderbotTokenizer(GPTTokenizer):
     pretrained_resource_files_map = {
         "vocab_file": {
             "blenderbot-400M-distill":
-                "blenderbot-400M-distill/vocab.json",
-            # "blenderbot-90M":
-            # "blenderbot-90M/vocab.json",
+                "data/blenderbot-400M-distill/vocab.json",
             "blenderbot-3B":
-                "blenderbot-3B/vocab.json",
+                "data/blenderbot-3B/vocab.json",
             "blenderbot-1B-distill":
-                "blenderbot-1B-distill/vocab.json"},
+                "data/blenderbot-1B-distill/vocab.json"},
         "merges_file": {
             "blenderbot-400M-distill":
-                "blenderbot-400M-distill/merges.txt",
-            # "blenderbot-90M":
-            # "blenderbot-90M/merges.txt",
+                "data/blenderbot-400M-distill/merges.txt",
             "blenderbot-3B":
-                "blenderbot-3B/merges.txt",
+                "data/blenderbot-3B/merges.txt",
             "blenderbot-1B-distill":
-                "blenderbot-1B-distill/merges.txt"
+                "data/blenderbot-1B-distill/merges.txt"
         }
     }
     pretrained_init_configuration = {"blenderbot-3B": {"add_prefix": True},
