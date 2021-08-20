@@ -53,18 +53,22 @@ def convert_pytorch_checkpoint_to_paddle(pytorch_checkpoint_path,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="blenderbot_small-90M")
-    parser.add_argument("--torch_file_folder", type=str, default="../../../下载")
+    parser.add_argument("--model_name", type=str, default="blenderbot-400M-distill")
+    parser.add_argument("--torch_file_folder", type=str, default="../../下载")
     parser.add_argument('--dtype',type=str,default='float32',help="float32 or float16")
 
     args = parser.parse_args()
-    assert args.dtype in ['float32','float16'],f"{args.dtype} not in float32 or float16"
+    assert args.dtype in ['float32','float16'],\
+        f"{args.dtype} dtype only support float32 or float16"
+
     pytorch_checkpoint_path = f"{args.torch_file_folder}/{args.model_name}/pytorch_model.bin"
-    paddle_dump_path = f"./{args.model_name}/model_state.pdparams"
+    paddle_dump_path = f"./data/{args.model_name}/model_state.pdparams"
 
     if args.model_name == "blenderbot_small-90M":
         model = "blenderbot_small"
-    elif args.model_name in ["blenderbot-400M-distill", "blenderbot-1B-distill", "blenderbot-3B"]:
+    elif args.model_name in ["blenderbot-400M-distill",
+                             "blenderbot-1B-distill",
+                             "blenderbot-3B"]:
         model = "blenderbot"
     else:
         raise f"{args.model_name} not find"
