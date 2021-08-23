@@ -23,7 +23,7 @@ Blenderbot Generator 采用了传统的 Seq2Seq Transformer 架构，本仓库�
 
 **项目 aistudio 地址：**
 
-[aistudio - blenderbot]()
+[aistudio - blenderbot](https://aistudio.baidu.com/aistudio/projectdetail/2259520?shared=1)
 
 ## 2.环境依赖
 
