@@ -4,7 +4,7 @@ compare/
 */*.bin
 model_state.pdparams
 param_check.py
-
+sample.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

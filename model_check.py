@@ -35,7 +35,9 @@ def run_check(model_name):
             pd_model = PDmodel.from_pretrained(model_name)
             pd_model.eval()
             with paddle.no_grad():
-                pd_outputs = torch.from_numpy(pd_model(pd_inputs).numpy())
+                # outputs = pd_model(pd_inputs)
+                outputs = pd_model(pd_inputs, use_cache=True)[0]
+                pd_outputs = torch.from_numpy(outputs.numpy())
             return pd_outputs
 
         pt_outputs = get_torch_result(model_name)
