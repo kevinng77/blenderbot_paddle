@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-# Copied from .paddlenlp.transformers.bart.modeling.shift_tokens_right
+# Copied from paddlenlp.transformers.bart.modeling.shift_tokens_right
 def shift_tokens_right(input_ids: tensor, decoder_start_token_id: int):
     """
     Shift input ids one token to the right.
@@ -154,15 +154,16 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
     Please should refer to the superclass for more information regarding methods and arguments.
     """
 
-    def __init__(self, num_embeddings, embedding_dim, padding_idx=None):
-        super().__init__(num_embeddings, embedding_dim)
+    def __init__(self, num_embeddings, embedding_dim):
+        super().__init__(
+            num_embeddings=num_embeddings, embedding_dim=embedding_dim)
 
     def forward(self, input_ids_shape, past_key_values_length=0):
         """
         Args:
             input_ids_shape (`tuple`): Expected to be [batch_size, sequence_length].
             past_key_values_length (`int`, optional): The length of past_key_value,
-            which is used only when the ``use_cache=True`` during prediction generating.
+            which is used only when ``use_cache=True`` during prediction generating.
 
         Returns:
             (Tensor): The generated positional embedding.
@@ -184,8 +185,8 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
     """
 
     def __init__(self,
-                 embed_tokens,
                  vocab_size,
+                 embed_tokens=None,
                  pad_token_id=0,
                  d_model=1280,
                  num_encoder_layers=2,
@@ -205,13 +206,16 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
         if embed_tokens is not None:
             self.embed_tokens = embed_tokens
         else:
-            self.embed_tokens = nn.Embedding(vocab_size, d_model, pad_token_id)
+            self.embed_tokens = nn.Embedding(
+                num_embeddings=vocab_size,
+                embedding_dim=d_model,
+                padding_idx=pad_token_id)
         self.embed_scale = math.sqrt(d_model) if scale_embedding else 1.0
         self.encoder_embed_positions = BlenderbotLearnedPositionalEmbedding(
-            max_position_embeddings, d_model, pad_token_id)
+            num_embeddings=max_position_embeddings, embedding_dim=d_model)
 
         self.encoder_dropout = nn.Dropout(dropout)
-        self.encoder_layernorm = nn.LayerNorm(d_model)
+        self.encoder_layernorm = nn.LayerNorm(normalized_shape=d_model)
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
@@ -222,14 +226,12 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
             normalize_before=normalize_before)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers)
+        self.encoder = nn.TransformerEncoder(
+            encoder_layer=encoder_layer, num_layers=num_encoder_layers)
 
         self.apply(self.init_weights)
 
-    def forward(
-            self,
-            input_ids,
-            attention_mask=None, ):
+    def forward(self, input_ids, attention_mask=None):
         """
         Returns:
             Tensor: The last hidden states at the last layer of the encoder.
@@ -252,6 +254,7 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
             attention_mask.stop_gradient = True
 
         encoder_output = self.encoder(encoder_input, src_mask=attention_mask)
+        # Different from BlenderbotSmall, Blenderbot Encoder apply the final layer norm on encoder output
         encoder_output = self.encoder_layernorm(encoder_output)
         return encoder_output
 
@@ -265,8 +268,8 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
     """
 
     def __init__(self,
-                 embed_tokens,
                  vocab_size,
+                 embed_tokens=None,
                  pad_token_id=0,
                  d_model=1280,
                  num_decoder_layers=12,
@@ -285,12 +288,15 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
         if embed_tokens is not None:
             self.embed_tokens = embed_tokens
         else:
-            self.embed_tokens = nn.Embedding(vocab_size, d_model, pad_token_id)
+            self.embed_tokens = nn.Embedding(
+                num_embeddings=vocab_size,
+                embedding_dim=d_model,
+                padding_idx=pad_token_id)
         self.embed_scale = math.sqrt(d_model) if scale_embedding else 1.0
         self.decoder_embed_positions = BlenderbotLearnedPositionalEmbedding(
-            max_position_embeddings, d_model, pad_token_id)
+            num_embeddings=max_position_embeddings, embedding_dim=d_model)
         self.decoder_dropout = nn.Dropout(dropout)
-        self.decoder_layernorm = nn.LayerNorm(d_model)
+        self.decoder_layernorm = nn.LayerNorm(normalized_shape=d_model)
 
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=d_model,
@@ -301,7 +307,8 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
             normalize_before=normalize_before)
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers)
+        self.decoder = nn.TransformerDecoder(
+            decoder_layer=decoder_layer, num_layers=num_decoder_layers)
         self.apply(self.init_weights)
 
     def forward(self,
@@ -321,6 +328,8 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                 Otherwise, the return will be a tuple of ``(decoder_output, cache)``. Please refer to
                 class :class:`paddle.nn.TransformerDecoder` for more information regarding ``cache``.
         """
+        if decoder_input_ids is None:
+            raise ValueError("Decoder_input_ids cannot be None.")
         if decoder_attention_mask is None:
             decoder_length = paddle.shape(decoder_input_ids)[-1]
             decoder_attention_mask = paddle.tensor.triu(
@@ -337,7 +346,7 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
         decoder_input = self.decoder_dropout(hidden_states)
 
-        if use_cache:
+        if use_cache:  # TODO
             if cache is None:
                 cache = self.decoder.gen_cache(memory=encoder_output)
 
@@ -450,20 +459,43 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
         self.decoder_start_token_id = decoder_start_token_id
-        self.shared = nn.Embedding(vocab_size, d_model, pad_token_id)
+        self.shared = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=d_model,
+            padding_idx=pad_token_id)
         self.encoder = BlenderbotEncoder(
-            self.shared, vocab_size, pad_token_id, d_model, num_encoder_layers,
-            encoder_attention_heads, encoder_ffn_dim, dropout,
-            activation_function, attention_dropout, activation_dropout,
-            max_position_embeddings, init_std, scale_embedding,
-            normalize_before)
+            vocab_size=vocab_size,
+            embed_tokens=self.shared,
+            pad_token_id=pad_token_id,
+            d_model=d_model,
+            num_encoder_layers=num_encoder_layers,
+            encoder_attention_heads=encoder_attention_heads,
+            encoder_ffn_dim=encoder_ffn_dim,
+            dropout=dropout,
+            activation_function=activation_function,
+            attention_dropout=attention_dropout,
+            activation_dropout=activation_dropout,
+            max_position_embeddings=max_position_embeddings,
+            init_std=init_std,
+            scale_embedding=scale_embedding,
+            normalize_before=normalize_before)
 
         self.decoder = BlenderbotDecoder(
-            self.shared, vocab_size, pad_token_id, d_model, num_decoder_layers,
-            decoder_attention_heads, decoder_ffn_dim, dropout,
-            activation_function, attention_dropout, activation_dropout,
-            max_position_embeddings, init_std, scale_embedding,
-            normalize_before)
+            vocab_size=vocab_size,
+            embed_tokens=self.shared,
+            pad_token_id=pad_token_id,
+            d_model=d_model,
+            num_decoder_layers=num_decoder_layers,
+            decoder_attention_heads=decoder_attention_heads,
+            decoder_ffn_dim=decoder_ffn_dim,
+            dropout=dropout,
+            activation_function=activation_function,
+            attention_dropout=attention_dropout,
+            activation_dropout=activation_dropout,
+            max_position_embeddings=max_position_embeddings,
+            init_std=init_std,
+            scale_embedding=scale_embedding,
+            normalize_before=normalize_before)
         self.apply(self.init_weights)
 
     def forward(self,
@@ -535,19 +567,25 @@ class BlenderbotModel(BlenderbotPretrainedModel):
                 decoder_output, encoder_output = model(**inputs)
         """
         if decoder_input_ids is None:
-            decoder_input_ids = shift_tokens_right(input_ids,
-                                                   self.decoder_start_token_id)
+            decoder_input_ids = shift_tokens_right(
+                input_ids=input_ids,
+                decoder_start_token_id=self.decoder_start_token_id)
         if encoder_output is None:
-            encoder_output = self.encoder(input_ids, attention_mask)
+            encoder_output = self.encoder(
+                input_ids=input_ids, attention_mask=attention_mask)
 
         memory_mask = paddle.cast(
             input_ids == self.pad_token_id,
             dtype=paddle.get_default_dtype()).unsqueeze([1, 2]) * -1e9
         memory_mask.stop_gradient = True
 
-        decoder_output = self.decoder(decoder_input_ids, decoder_attention_mask,
-                                      encoder_output, memory_mask, use_cache,
-                                      cache)
+        decoder_output = self.decoder(
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=decoder_attention_mask,
+            encoder_output=encoder_output,
+            memory_mask=memory_mask,
+            use_cache=use_cache,
+            cache=cache)
         # return encoder output for decoder to generate sequence.
         return decoder_output, encoder_output
 
@@ -605,8 +643,13 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
                 # outputs is a tuple of (lm_logits, cache) if ``use_cache=True``.
         """
         decoder_outputs, encoder_output = self.blenderbot(
-            input_ids, attention_mask, decoder_input_ids,
-            decoder_attention_mask, encoder_output, use_cache, cache)
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=decoder_attention_mask,
+            encoder_output=encoder_output,
+            use_cache=use_cache,
+            cache=cache)
 
         lm_logits = paddle.tensor.matmul(
             decoder_outputs[0] if use_cache else decoder_outputs,
