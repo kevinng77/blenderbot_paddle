@@ -4,7 +4,7 @@ import paddle
 paddle.set_device("cpu")
 
 text = [
-    # "it is a nice day today!",  # 官方例题
+    "it is a nice day today!",  # 官方例题
     "My friends are cool but they eat too many carbs.",  # 官方例题
     "My 'but' they:@ eat too many carbs:)",
 ]
@@ -16,12 +16,14 @@ def run_check(model_name):
         PTtokenizer = PTTokenizer.from_pretrained('facebook/' + model_name)
         pt_temp = PTtokenizer(t)
         pt_inputs = pt_temp["input_ids"]
-        print("torch tokenizer: ", pt_inputs)
-
         PDtokenizer = PDTokenizer.from_pretrained(model_name)
         pd_temp = PDtokenizer(t)
         pd_inputs = pd_temp["input_ids"]
-        print("paddle tokenizer: ", pd_inputs)
+        if pt_inputs == pd_inputs:
+            print("Passed")
+        # print(f"torch token matched paddle? {pt_inputs == pd_inputs}")
+        # print("torch tokenizer: ", pt_inputs)
+        # print("paddle tokenizer: ", pd_inputs)
 
 
 if __name__ == '__main__':
