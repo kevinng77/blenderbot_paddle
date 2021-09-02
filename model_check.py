@@ -4,29 +4,28 @@ import torch
 
 paddle.set_device("cpu")
 text = [
-    "My friends are cool but they eat too many carbs.",  # 官方例题
-    # "it is a nice day today!",  # 官方例题
+    # "My friends are cool but they eat too many carbs.",  # 官方例题
+    "nice day today!",  # 官方例题
+    # "Hello, my dog is cute"
 ]
 
 
 def run_check(model_name):
     PDtokenizer = PDTokenizer.from_pretrained(model_name)
-
+    PTtokenizer = PTTokenizer.from_pretrained('facebook/' + model_name)
     for t in text:
-        temp = PDtokenizer(t)
-        inputs = temp["input_ids"]  # tokenizer consistency could be check in tokenizer_check file
-        pt_inputs = torch.tensor([inputs])
-        pd_inputs = paddle.to_tensor([inputs])
-
+        inputs =  PDtokenizer(t,return_attention_mask=True, return_token_type_ids=False)# tokenizer consistency could be check in tokenizer_check file
+        pt_inputs = PTtokenizer(t, return_tensors="pt")
+        pd_inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
         # torch model
         def get_torch_result(model_name):
             pt_model = PTmodel.from_pretrained('facebook/' + model_name)
-            shifted_input_ids = torch.zeros_like(pt_inputs)
-            shifted_input_ids[:, 1:] = pt_inputs[:, :-1].clone()
+            shifted_input_ids = torch.zeros_like(pt_inputs["input_ids"])
+            shifted_input_ids[:, 1:] = pt_inputs["input_ids"][:, :-1].clone()
             shifted_input_ids[:, 0] = 1
             pt_model.eval()
             with torch.no_grad():
-                pt_outputs = pt_model(input_ids=pt_inputs,
+                pt_outputs = pt_model(**pt_inputs,
                                       decoder_input_ids=shifted_input_ids).logits
             return pt_outputs
 
@@ -36,7 +35,7 @@ def run_check(model_name):
             pd_model.eval()
             with paddle.no_grad():
                 # outputs = pd_model(pd_inputs)
-                outputs = pd_model(pd_inputs, use_cache=True)[0]
+                outputs = pd_model(**pd_inputs, use_cache=True)[0]
                 pd_outputs = torch.from_numpy(outputs.numpy())
             return pd_outputs
 
@@ -50,7 +49,7 @@ def run_check(model_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default='blenderbot_small-90M',
+    parser.add_argument("--model_name", type=str, default='blenderbot-400M-distill',
                         help="blenderbot_small-90M or blenderbot-400M-distill")
     args = parser.parse_args()
     model_name = args.model_name
@@ -59,6 +58,7 @@ if __name__ == '__main__':
             BlenderbotSmallTokenizer as PDTokenizer, \
             BlenderbotSmallForConditionalGeneration as PDmodel
         from transformers import \
+            BlenderbotSmallTokenizer as PTTokenizer, \
             BlenderbotSmallForConditionalGeneration as PTmodel
 
     elif model_name in ['blenderbot-400M-distill', 'blenderbot-1B-distill', 'blenderbot-3B']:

@@ -288,8 +288,15 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
                 1)
         decoder_inputs_embeds = self.embed_tokens(
             decoder_input_ids) * self.embed_scale
+        # cache[num_layer][0] is an instance of `MultiHeadAttention.Cache` containing
+        # k and v with shape of `[batch_size, num_heads, len_seq, embed_dim // num_heads]`
+        # ``len_seq`` refer to the length of ``decoder_input_ids``
+        # Refer to paddle.nn.MultiHeadAttention.gen_cache for more details regarding cache.
+        past_key_values_length = cache[0][0].k.shape[2] if cache is not None else 0
+
         decoder_inputs_embed_pos = self.decoder_embed_positions(
-            decoder_input_ids.shape)
+            input_ids_shape=decoder_input_ids.shape,
+            past_key_values_length=past_key_values_length)
 
         # Different from BLenderbot, BlenderbotSmall Apply layer norm on decoder_inputs_embeds
         decoder_inputs_embeds = self.decoder_layernorm_embedding(

@@ -19,12 +19,14 @@ import paddle
 import paddle.nn as nn
 import paddle.tensor as tensor
 from paddle.nn import Embedding
+from paddle.nn.layer.transformer import _convert_attention_mask
 
 from .. import PretrainedModel, register_base_model
 
 __all__ = [
     'BlenderbotModel', 'BlenderbotPretrainedModel', 'BlenderbotEncoder',
-    'BlenderbotDecoder', 'BlenderbotForConditionalGeneration'
+    'BlenderbotDecoder', 'BlenderbotForConditionalGeneration',
+    'BlenderbotForCausalLM'
 ]
 
 
@@ -122,11 +124,11 @@ class BlenderbotPretrainedModel(PretrainedModel):
     pretrained_resource_files_map = {
         "model_state": {
             "blenderbot-3B":
-                "data/blenderbot-3B/model_state.pdparams",
+                "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot/blenderbot-3B.pdparams",
             "blenderbot-1B-distill":
-                "data/blenderbot-1B-distill/model_state.pdparams",
+                "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot/blenderbot-1B-distill.pdparams",
             "blenderbot-400M-distill":
-                "data/blenderbot-400M-distill/model_state.pdparams",
+                "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot/blenderbot-400M-distill.pdparams",
         }
     }
 
@@ -151,7 +153,7 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
     """
     This module learns positional embeddings up to a fixed maximum size.
 
-    Please should refer to the superclass for more information regarding methods and arguments.
+    Please refer to the superclass for more information regarding methods and arguments.
     """
 
     def __init__(self, num_embeddings, embedding_dim):
@@ -176,12 +178,40 @@ class BlenderbotLearnedPositionalEmbedding(Embedding):
         return super().forward(positions)
 
 
+# def _convert_attention_mask(attn_mask, dtype):
+#     """
+#     Convert the attention mask to the target dtype we expect.
+#
+#     Parameters:
+#         attn_mask (Tensor, optional): A tensor used in multi-head attention
+#                 to prevents attention to some unwanted positions, usually the
+#                 paddings or the subsequent positions. It is a tensor with shape
+#                 broadcasted to `[batch_size, n_head, sequence_length, sequence_length]`.
+#                 When the data type is bool, the unwanted positions have `False`
+#                 values and the others have `True` values. When the data type is
+#                 int, the unwanted positions have 0 values and the others have 1
+#                 values. When the data type is float, the unwanted positions have
+#                 `-INF` values and the others have 0 values. It can be None when
+#                 nothing wanted or needed to be prevented attention to. Default None.
+#         dtype (VarType): The target type of `attn_mask` we expect.
+#
+#     Returns:
+#         Tensor: A Tensor with shape same as input `attn_mask`, with data type `dtype`.
+#     """
+#     if attn_mask is not None and attn_mask.dtype != dtype:
+#         attn_mask_dtype = convert_dtype(attn_mask.dtype)
+#         if attn_mask_dtype == 'bool' or 'int' in attn_mask_dtype:
+#             attn_mask = (paddle.cast(attn_mask, dtype) - 1.0) * 1e9
+#         else:
+#             attn_mask = paddle.cast(attn_mask, dtype)
+#     return attn_mask
+
 class BlenderbotEncoder(BlenderbotPretrainedModel):
     """
     The encoder of Blenderbot Model.
     Please refer to :class:`~paddlenlp.transformers.model_utils.PretrainedModel` or
     :class:`~paddlenlp.transformers.Blenderbot.BlenderbotModel` for more information
-    regarding methods and parameters.
+    regarding methods and arguments.
     """
 
     def __init__(self,
@@ -259,12 +289,127 @@ class BlenderbotEncoder(BlenderbotPretrainedModel):
         return encoder_output
 
 
+class BlenderbotDecoderLayer(nn.TransformerDecoderLayer):
+    def __init__(self,
+                 d_model,
+                 nhead,
+                 dim_feedforward,
+                 dropout=0.1,
+                 activation="gelu",
+                 attn_dropout=None,
+                 act_dropout=None,
+                 normalize_before=True,
+                 weight_attr=None,
+                 bias_attr=None
+                 ):
+        super(BlenderbotDecoderLayer, self).__init__(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            activation=activation,
+            attn_dropout=attn_dropout,
+            act_dropout=act_dropout,
+            normalize_before=normalize_before,
+            weight_attr=weight_attr,
+            bias_attr=bias_attr
+        )
+
+    def forward(self, tgt, memory, tgt_mask=None, memory_mask=None, cache=None):
+        """
+        Different from traditional TransformerDecoder, if memory is None, None cross-attention
+        operations will be applied. This is designed for BlenderbotForCausalLM
+
+        Please refer to  :class:`~paddlenlp.nn.TransformerDecoderLayer`
+        for more information regarding arguments.
+        """
+        tgt_mask = _convert_attention_mask(tgt_mask, tgt.dtype)
+        residual = tgt
+        if self.normalize_before:
+            tgt = self.norm1(tgt)
+        if cache is None:
+            tgt = self.self_attn(tgt, tgt, tgt, tgt_mask, None)
+        else:
+            tgt, incremental_cache = self.self_attn(tgt, tgt, tgt, tgt_mask,
+                                                    cache[0])
+        tgt = residual + self.dropout1(tgt)
+        if not self.normalize_before:
+            tgt = self.norm1(tgt)
+
+        # BlenderbotForCausalLM do not apply cross-attention
+        if memory is not None:
+            residual = tgt
+            if self.normalize_before:
+                tgt = self.norm2(tgt)
+            memory_mask = _convert_attention_mask(memory_mask, memory.dtype)
+            if cache is None:
+                tgt = self.cross_attn(tgt, memory, memory, memory_mask, None)
+            else:
+                tgt, static_cache = self.cross_attn(tgt, memory, memory,
+                                                    memory_mask, cache[1])
+            tgt = residual + self.dropout2(tgt)
+            if not self.normalize_before:
+                tgt = self.norm2(tgt)
+
+        # Fully Connected
+        residual = tgt
+        if self.normalize_before:
+            tgt = self.norm3(tgt)
+        tgt = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
+        tgt = residual + self.dropout3(tgt)
+        if not self.normalize_before:
+            tgt = self.norm3(tgt)
+        return tgt if cache is None else (tgt, (incremental_cache,
+                                                static_cache))
+
+
+class BlenderbotDecoderBlock(nn.TransformerDecoder):
+    def __init__(self, decoder_layer, num_layers, norm=None):
+        super(BlenderbotDecoderBlock, self).__init__(decoder_layer=decoder_layer,
+                                                     num_layers=num_layers,
+                                                     norm=norm)
+
+    def forward(self, tgt, memory, tgt_mask=None, memory_mask=None, cache=None):
+        """
+        Over write transformer decoer forward method for BlenderbotForCausalLM
+
+        Please refer to  :class:`~paddlenlp.nn.TransformerDecoder`
+        for more information regarding arguments.
+        """
+
+        tgt_mask = _convert_attention_mask(tgt_mask, tgt.dtype)
+        if memory is not None:
+            memory_mask = _convert_attention_mask(memory_mask, memory.dtype)
+
+        output = tgt
+        new_caches = []
+        for i, mod in enumerate(self.layers):
+            if cache is None:
+                output = mod(output,
+                             memory,
+                             tgt_mask=tgt_mask,
+                             memory_mask=memory_mask,
+                             cache=None)
+            else:
+                output, new_cache = mod(output,
+                                        memory,
+                                        tgt_mask=tgt_mask,
+                                        memory_mask=memory_mask,
+                                        cache=cache[i])
+                new_caches.append(new_cache)
+
+        if self.norm is not None:
+            output = self.norm(output)
+
+        return output if cache is None else (output, new_caches)
+
+
 class BlenderbotDecoder(BlenderbotPretrainedModel):
     """
     The decoder of Blenderbot Model.
     Please refer to :class:`~paddlenlp.transformers.model_utils.PretrainedModel` and
     :class:`~paddlenlp.transformers.Blenderbot.BlenderbotModel` for more information
-    regarding methods and parameters.
+    regarding methods and arguments.
     """
 
     def __init__(self,
@@ -298,7 +443,7 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
         self.decoder_dropout = nn.Dropout(dropout)
         self.decoder_layernorm = nn.LayerNorm(normalized_shape=d_model)
 
-        decoder_layer = nn.TransformerDecoderLayer(
+        decoder_layer = BlenderbotDecoderLayer(
             d_model=d_model,
             nhead=decoder_attention_heads,
             dim_feedforward=decoder_ffn_dim,
@@ -307,9 +452,14 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
             attn_dropout=attention_dropout,
             act_dropout=activation_dropout,
             normalize_before=normalize_before)
-        self.decoder = nn.TransformerDecoder(
+        self.decoder = BlenderbotDecoderBlock(
             decoder_layer=decoder_layer, num_layers=num_decoder_layers)
         self.apply(self.init_weights)
+
+    # def prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
+    #     # create causal mask):
+    #     # todo
+    #     pass
 
     def forward(self,
                 decoder_input_ids=None,
@@ -320,7 +470,7 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                 cache=None):
         """
         Please refer to :class:`~paddlenlp.transformers.Blenderbot.BlenderbotModel` for more
-        information regarding the parameters.
+        information regarding the arguments.
         Returns:
             Tensor|tuple:
                 If ``use_cache=False``, the return will be the last hidden state of decoder with shape
@@ -328,8 +478,22 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                 Otherwise, the return will be a tuple of ``(decoder_output, cache)``. Please refer to
                 class :class:`paddle.nn.TransformerDecoder` for more information regarding ``cache``.
         """
+
         if decoder_input_ids is None:
             raise ValueError("Decoder_input_ids cannot be None.")
+        # decoder_length = paddle.shape(decoder_input_ids)[-1]
+        # causal_mask = paddle.tensor.triu(
+        #     (paddle.full(
+        #         (decoder_length, decoder_length),
+        #         -np.inf,
+        #         dtype=paddle.get_default_dtype())),
+        #     1)
+
+        # TODO attention expand
+        # if decoder_attention_mask is not None:
+        #     decoder_attention_mask = decoder_attention_mask + causal_mask
+        # else:
+        #     decoder_attention_mask = causal_mask
         if decoder_attention_mask is None:
             decoder_length = paddle.shape(decoder_input_ids)[-1]
             decoder_attention_mask = paddle.tensor.triu(
@@ -338,18 +502,22 @@ class BlenderbotDecoder(BlenderbotPretrainedModel):
                     -np.inf,
                     dtype=paddle.get_default_dtype())),
                 1)
+
         decoder_inputs_embeds = self.embed_tokens(
             decoder_input_ids) * self.embed_scale
+        # cache[num_layer][0] is an instance of `MultiHeadAttention.Cache` containing
+        # k and v with shape of `[batch_size, num_heads, len_seq, embed_dim // num_heads]`
+        # ``len_seq`` refer to the length of ``decoder_input_ids``
+        # Refer to paddle.nn.MultiHeadAttention.gen_cache for more details regarding cache.
+        past_key_values_length = cache[0][0].k.shape[
+            2] if cache is not None else 0
+
         decoder_inputs_embed_pos = self.decoder_embed_positions(
-            decoder_input_ids.shape)
+            input_ids_shape=decoder_input_ids.shape,
+            past_key_values_length=past_key_values_length)
 
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
         decoder_input = self.decoder_dropout(hidden_states)
-
-        if use_cache:  # TODO
-            if cache is None:
-                cache = self.decoder.gen_cache(memory=encoder_output)
-
         decoder_output = self.decoder(
             tgt=decoder_input,
             memory=encoder_output,
@@ -554,9 +722,9 @@ class BlenderbotModel(BlenderbotPretrainedModel):
                 import paddle
                 from paddlenlp.transformers import BlenderbotTokenizer, BlenderbotModel
 
-                # "blenderbot-400M-distill" is pretrained weight of BlenderbotForConditionalGeneration,
+                # "blenderbot-400M-distill" is the pretrained weight of BlenderbotForConditionalGeneration,
                 # Therefore some weight of additional layers in BlenderbotForConditionalGeneration
-                # might not be loaded and used.
+                # might not be loaded and used regarding the following sample code.
                 pretrained_model_name = "blenderbot-400M-distill"
                 tokenizer = BlenderbotTokenizer.from_pretrained(pretrained_model_name)
                 model = BlenderbotModel.from_pretrained(pretrained_model_name)
@@ -573,6 +741,11 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         if encoder_output is None:
             encoder_output = self.encoder(
                 input_ids=input_ids, attention_mask=attention_mask)
+            # initialize cache based on encoder output for decoding at 1st time step.
+            if use_cache and cache is None:
+                cache = self.decoder.decoder.gen_cache(memory=encoder_output)
+        if use_cache and cache is None:
+            raise ValueError("Please specify cache when use_cache is True")
 
         memory_mask = paddle.cast(
             input_ids == self.pad_token_id,
@@ -618,10 +791,11 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
                 decoder_attention_mask=None,
                 encoder_output=None,
                 use_cache=False,
-                cache=None):
+                cache=None,
+                **kwargs):
         """
         Please refer to :class:`~paddlenlp.transformers.Blenderbot.BlenderbotModel` for more
-        information regarding parameters.
+        information regarding arguments.
         Return:
             Tensor|tuple: If ``use_cache=False``, the return will be a tensor with shape of
                 [batch_size, seq_lens, hidden_size]. Otherwise, the return will be a tuple
@@ -678,9 +852,124 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
 
         return {
             "input_ids":
-            None,  # during prediction, Encoder_output is provided, do not need input_ids.
+                None,  # during prediction, Encoder_output is provided, do not need input_ids.
             "decoder_input_ids": decoder_input_ids,
             "encoder_output": encoder_output,
+            "attention_mask": attention_mask,
+            "use_cache": use_cache,
+            "cache": cache
+        }
+
+
+# class BlenderbotDecoderWrapper(BlenderbotPretrainedModel):
+#     """TODO:
+#     This wrapper class is a helper class to correctly load pretrained checkpoints when the causal language model is
+#     used
+#     """
+#
+#     def __init__(self,
+#                  vocab_size,
+#                  embed_tokens=None,
+#                  pad_token_id=0,
+#                  d_model=1280,
+#                  num_decoder_layers=12,
+#                  decoder_attention_heads=32,
+#                  decoder_ffn_dim=5120,
+#                  dropout=0.1,
+#                  activation_function='gelu',
+#                  attention_dropout=0.0,
+#                  activation_dropout=0.0,
+#                  max_position_embeddings=128,
+#                  init_std=0.02,
+#                  scale_embedding=True,
+#                  normalize_before=True):
+#         super(BlenderbotDecoderWrapper, self).__init__()
+#         self.decoder = BlenderbotDecoder(
+#             vocab_size=vocab_size,
+#             embed_tokens=embed_tokens,
+#             pad_token_id=pad_token_id,
+#             d_model=d_model,
+#             num_decoder_layers=num_decoder_layers,
+#             decoder_attention_heads=decoder_attention_heads,
+#             decoder_ffn_dim=decoder_ffn_dim,
+#             dropout=dropout,
+#             activation_function=activation_function,
+#             attention_dropout=attention_dropout,
+#             activation_dropout=activation_dropout,
+#             max_position_embeddings=max_position_embeddings,
+#             init_std=init_std,
+#             scale_embedding=scale_embedding,
+#             normalize_before=normalize_before)
+#
+#     def forward(self, *args, **kwargs):
+#         return self.decoder(*args, **kwargs)
+
+
+class BlenderbotForCausalLM(BlenderbotPretrainedModel):
+    """
+    TODO
+    """
+    def __init__(self, blenderbot):
+        super().__init__()
+        self.blenderbot = blenderbot
+        self.decoder = blenderbot.decoder
+
+        self.lm_head_weight = self.create_parameter(
+            shape=[
+                blenderbot.config['vocab_size'],
+                blenderbot.config['d_model']
+            ],
+            dtype=blenderbot.shared.weight.dtype,
+            is_bias=False)
+        self.register_buffer(
+            "final_logits_bias",
+            paddle.zeros(
+                (1, blenderbot.config['vocab_size']),
+                dtype=paddle.get_default_dtype()))
+        self.apply(self.init_weights)
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                use_cache=False,
+                cache=None,
+                **kwargs):
+        """
+        TODO
+        """
+        decoder_outputs = self.decoder(
+            decoder_input_ids=input_ids,
+            encoder_output=None,
+            memory_mask=None,
+            use_cache=use_cache,
+            cache=cache)
+
+        lm_logits = paddle.tensor.matmul(
+            decoder_outputs[0] if use_cache else decoder_outputs,
+            self.lm_head_weight,
+            transpose_y=True) + self.final_logits_bias
+
+        if use_cache:
+            cache = decoder_outputs[1]
+            return lm_logits, cache
+        return lm_logits
+
+    def prepare_inputs_for_generation(self,
+                                      input_ids,
+                                      attention_mask=None,
+                                      use_cache=True,
+                                      cache=None,
+                                      **kwargs):
+        """
+        Prepare inputs for decoder to generate sentences.
+        Return:
+            dict: A dictionary containing necessary inputs for generating next token.
+        """
+        if cache is not None:
+            input_ids = input_ids[:, -1:].unsqueeze(-1)
+
+        return {
+            "input_ids": input_ids,
             "attention_mask": attention_mask,
             "use_cache": use_cache,
             "cache": cache
