@@ -1,48 +1,74 @@
-import torch
+import argparse
 import paddle
-from paddlenlp.transformers import BlenderbotTokenizer, BlenderbotForCausalLM
+import torch
 
-text = "Hello, my dog is cute"
-use_cache = False
-model_name = "blenderbot-400M-distill"
-tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
-pd_model = BlenderbotForCausalLM.from_pretrained(model_name)
-pd_model.eval()
-inputs = tokenizer(text, return_attention_mask=True, return_token_type_ids=False)
-inputs = {k: paddle.to_tensor([v]) for (k, v) in inputs.items()}
+paddle.set_device("cpu")
+text = [
+    "My friends are cool but they eat too many carbs.",  # 官方例题
+    # "nice day today!",  # 官方例题
+    # "Hello, my dog is cute"
+]
 
-with paddle.no_grad():
-    outputs = pd_model(**inputs, use_cache=use_cache)
-    pd_logit = outputs[0] if use_cache else outputs
-    pd_outputs = torch.from_numpy(pd_logit.numpy())
 
-from transformers import BlenderbotTokenizer as pttokenizer, BlenderbotForCausalLM as ptmodel
+def run_check(model_name):
+    PDtokenizer = PDTokenizer.from_pretrained(model_name)
+    PTtokenizer = PTTokenizer.from_pretrained('facebook/' + model_name)
+    for t in text:
+        inputs =  PDtokenizer(t,return_attention_mask=True, return_token_type_ids=False)# tokenizer consistency could be check in tokenizer_check file
+        pt_inputs = PTtokenizer(t, return_tensors="pt")
+        pd_inputs = {k:paddle.to_tensor([v]) for (k, v) in inputs.items()}
+        # torch model
+        def get_torch_result(model_name):
+            pt_model = PTmodel.from_pretrained('facebook/' + model_name)
+            # shifted_input_ids = torch.zeros_like(pt_inputs["input_ids"])
+            # shifted_input_ids[:, 1:] = pt_inputs["input_ids"][:, :-1].clone()
+            # shifted_input_ids[:, 0] = 1
+            pt_model.eval()
+            with torch.no_grad():
+                pt_outputs = pt_model(**pt_inputs).logits
+            return pt_outputs
 
-tokenizer = pttokenizer.from_pretrained('facebook/' + model_name)
-pt_model = ptmodel.from_pretrained('facebook/' + model_name, add_cross_attention=False)
-pt_model.config.is_decoder = True
-pt_model.config.is_encoder_decoder = False
-pt_model.eval()
-assert pt_model.config.is_decoder, f"{pt_model.__class__} has to be configured as a decoder."
-inputs = tokenizer(text, return_tensors="pt")
-print("pt inputs", inputs)
-with torch.no_grad():
-    outputs = pt_model(**inputs)
-    pt_outputs = outputs.logits
+        def get_paddle_result(model_name):
+            # paddle model
+            pd_model = PDmodel.from_pretrained(model_name)
+            pd_model.eval()
+            with paddle.no_grad():
+                # outputs = pd_model(pd_inputs)
+                outputs = pd_model(**pd_inputs, use_cache=True)[0]
+                pd_outputs = torch.from_numpy(outputs.numpy())
+            return pd_outputs
 
-print("pd shape", pd_logit.shape)
-print("pt shape", pt_outputs.shape)
-print(f"input text: {text}")
-print("mean difference:", torch.mean(torch.abs(pt_outputs - pd_outputs)))
-print("max difference:", torch.max(torch.abs(pt_outputs - pd_outputs)))
+        pt_outputs = get_torch_result(model_name)
+        pd_outputs = get_paddle_result(model_name)
+        print(f"huggingface {'facebook/' + model_name} vs paddle {model_name}")
+        print(f"input text: {t}")
+        print("mean difference:", torch.mean(torch.abs(pt_outputs - pd_outputs)))
+        print("max difference:", torch.max(torch.abs(pt_outputs - pd_outputs)))
 
-"""
 
-tensor([[[-0.5525, -0.6642,  0.3971,  ..., -0.3808, -0.9019,  0.5104],
-         [-1.0015, -0.5802,  0.2341,  ..., -1.4139, -0.6498,  0.8673],
-         [ 0.0371, -0.6888, -0.0774,  ..., -0.8828, -0.8511,  0.6447],
-         ...,
-         [-1.0579, -0.8366,  0.5838,  ..., -0.9504, -0.4371,  1.1883],
-         [-1.0046, -0.5711,  0.7343,  ..., -0.5798, -0.1600,  0.5506],
-         [-1.4217, -1.4740,  0.0198,  ...,  0.1253, -0.6958,  1.3835]]])
-         """
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, default='blenderbot-400M-distill',
+                        help="blenderbot_small-90M or blenderbot-400M-distill")
+    args = parser.parse_args()
+    model_name = args.model_name
+    if model_name in ['blenderbot_small-90M', 'blenderbot-90M']:
+        from paddlenlp.transformers import \
+            BlenderbotSmallTokenizer as PDTokenizer, \
+            BlenderbotSmallForCausalLM as PDmodel
+        from transformers import \
+            BlenderbotSmallTokenizer as PTTokenizer, \
+            BlenderbotSmallForCausalLM as PTmodel
+
+    elif model_name in ['blenderbot-400M-distill', 'blenderbot-1B-distill', 'blenderbot-3B']:
+        from paddlenlp.transformers import \
+            BlenderbotTokenizer as PDTokenizer, \
+            BlenderbotForCausalLM as PDmodel
+
+        from transformers import \
+            BlenderbotTokenizer as PTTokenizer, \
+            BlenderbotForCausalLM as PTmodel
+    else:
+        raise f"model name not in {['blenderbot_small-90M', 'blenderbot-400M-distill']} "
+
+    run_check(model_name=model_name)
