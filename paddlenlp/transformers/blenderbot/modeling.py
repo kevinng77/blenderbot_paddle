@@ -715,7 +715,7 @@ class BlenderbotModel(BlenderbotPretrainedModel):
         if encoder_output is None:
             encoder_output = self.encoder(
                 input_ids=input_ids, attention_mask=attention_mask)
-            # initialize cache based on encoder output for decoding at 1st time step.
+            # initialize cache for decoding ONLY at 1st time step.
             if use_cache and cache is None:
                 cache = self.decoder.decoder.gen_cache(memory=encoder_output)
         if use_cache and cache is None:

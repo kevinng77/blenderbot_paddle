@@ -71,11 +71,11 @@ class BlenderbotSmallTokenizer(GPTTokenizer):
     pretrained_resource_files_map = {
         "vocab_file": {
             "blenderbot_small-90M":
-                "data/blenderbot_small-90M/vocab.json",
+            "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot_small/blenderbot_small-90M-vocab.json",
         },
         "merges_file": {
             "blenderbot_small-90M":
-                "data/blenderbot_small-90M/merges.txt",
+            "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot_small/blenderbot_small-90M-merges.txt",
         }
     }
     pretrained_init_configuration = {"blenderbot_small-90M": {}}
@@ -93,8 +93,14 @@ class BlenderbotSmallTokenizer(GPTTokenizer):
             pad_token="__null__",
             eol_token="__newln__", ):
         super(BlenderbotSmallTokenizer, self).__init__(
-            vocab_file, merges_file, errors, max_len, special_tokens, pad_token,
-            eos_token, eol_token)
+            vocab_file=vocab_file,
+            merges_file=merges_file,
+            errors=errors,
+            max_len=max_len,
+            special_tokens=special_tokens,
+            pad_token=pad_token,
+            eos_token=eos_token,
+            eol_token=eol_token)
         self.pat = r"\S+\n?"  # String matching pattern of BlenderbotSmall is different from Blenderbot
         self.unk_id = self.encoder[unk_token]
         self.eol_token = eol_token
@@ -102,7 +108,7 @@ class BlenderbotSmallTokenizer(GPTTokenizer):
     def bpe(self, token):
         """
         Apply Byte-Pair-Encoding on token.
-        The bpe process of BlenderbotSmall is different from Blenderbot.
+        The process of bpe in BlenderbotSmall is different from Blenderbot.
         Args:
             token (str): The token to be converted.
 
@@ -208,7 +214,7 @@ class BlenderbotSmallTokenizer(GPTTokenizer):
         """
         Converts a sequence of ids (list of integers) to a single string.
         Args:
-            ids (list[int]): A sequence of tokens.
+            ids (list[int]): A sequence of ids corresponding to tokens.
 
         Returns:
             str: Converted string.

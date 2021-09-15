@@ -862,7 +862,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPretrainedModel):
             # since the `static_cache` will not be used in BlenderbotSmallForCausalLM
             batch_size, len_seq = input_ids.shape
             cache = self.decoder.decoder.gen_cache(memory=paddle.zeros(
-                (batch_size, len_seq, self.blenderbot_small.config['d_model'])))
+                (batch_size, len_seq, self.decoder.config['d_model'])))
         decoder_outputs = self.decoder(
             decoder_input_ids=input_ids,
             encoder_output=None,

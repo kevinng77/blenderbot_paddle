@@ -4,8 +4,8 @@ import torch
 
 paddle.set_device("cpu")
 text = [
-    "My friends are cool but they eat too many carbs.",  # 官方例题
-    # "nice day today!",  # 官方例题
+    # "My friends are cool but they eat too many carbs.",  # 官方例题
+    "nice day today!",  # 官方例题
     # "Hello, my dog is cute"
 ]
 
@@ -48,7 +48,7 @@ def run_check(model_name):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default='blenderbot-400M-distill',
+    parser.add_argument("--model_name", type=str, default='blenderbot_small-90M',
                         help="blenderbot_small-90M or blenderbot-400M-distill")
     args = parser.parse_args()
     model_name = args.model_name
