@@ -131,9 +131,8 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
 
 class BlenderbotSmallDecoderLayer(nn.TransformerDecoderLayer):
     """
-    Construct decoder layer for BlenderbotSmallForCausalLM.
-    Different from BlenderbotSmallModel, BLenderbotSmallForCausalLM does not apply
-    cross-attention.
+    Construct decoder layer for BlenderbotSmallDecoder.
+    Please refer to :class:`~paddlenlp.nn.TransformerDecoderLayer` for more details.
     """
 
     def __init__(self,
@@ -226,7 +225,7 @@ class BlenderbotSmallDecoderLayer(nn.TransformerDecoderLayer):
 
 class TransformerDecoder(nn.TransformerDecoder):
     """
-    Construct Transformer decoder for BlenderbotSmallForCausalLM.
+    Construct Transformer decoder for BlenderbotSmallDecoder.
     """
 
     def __init__(self, decoder_layer, num_layers, norm=None):
@@ -421,7 +420,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
         decoder_inputs_embeds = self.embed_tokens(
             decoder_input_ids) * self.embed_scale
         # cache[num_layer][0] is an instance of `MultiHeadAttention.Cache` containing
-        # k and v with shape of `[batch_size, num_heads, len_seq, embed_dim // num_heads]`
+        # tensor k and v with shape of `[batch_size, num_heads, len_seq, embed_dim // num_heads]`
         # ``len_seq`` refer to the length of ``decoder_input_ids``
         # Refer to paddle.nn.MultiHeadAttention.gen_cache for more details regarding cache.
         past_key_values_length = cache[0][0].k.shape[
@@ -449,7 +448,7 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
 @register_base_model
 class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
     r"""
-     Construct a bare Blenderbot Model.
+     Construct a bare BlenderbotSmall Model.
 
      This model inherits from :class:`~paddlenlp.transformers.model_utils.PretrainedModel`.
      Check the superclass documentation for the generic methods and the library implements for all its model.
@@ -778,7 +777,7 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPretrainedModel):
                                       cache=None,
                                       **kwargs):
 
-        if "encoder_output" is not None:
+        if encoder_output is not None:
             expand_size = int(decoder_input_ids.shape[0]/encoder_output.shape[0])
             if expand_size > 1:
                 index = paddle.tile(
@@ -908,7 +907,7 @@ class BlenderbotSmallForCausalLM(BlenderbotSmallPretrainedModel):
             # since the `static_cache` will not be used in BlenderbotSmallForCausalLM
             batch_size, len_seq = input_ids.shape
             cache = self.decoder.decoder.gen_cache(memory=paddle.zeros(
-                (batch_size, len_seq, self.decoder.config['d_model'])))
+                (batch_size, len_seq, self.blenderbot_small.config['d_model'])))
         decoder_outputs = self.decoder(
             decoder_input_ids=input_ids,
             encoder_output=None,

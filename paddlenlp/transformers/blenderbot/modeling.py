@@ -837,7 +837,7 @@ class BlenderbotForConditionalGeneration(BlenderbotPretrainedModel):
             dict: A dictionary containing necessary inputs for generating next token.
         """
 
-        if "encoder_output" is not None:
+        if encoder_output is not None:
             expand_size = int(decoder_input_ids.shape[0]/encoder_output.shape[0])
             if expand_size > 1:
                 index = paddle.tile(
