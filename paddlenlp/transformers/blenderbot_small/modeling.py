@@ -177,8 +177,6 @@ class BlenderbotSmallDecoderLayer(nn.TransformerDecoderLayer):
             tgt = self.self_attn(
                 query=tgt, key=tgt, value=tgt, attn_mask=tgt_mask, cache=None)
         else:
-            # print("incremental cache k,v(decoder layer)\t",cache[0].k.shape)
-            # print("q,k,v(decoder layer)\t",tgt.shape)
             tgt, incremental_cache = self.self_attn(
                 query=tgt,
                 key=tgt,
@@ -203,9 +201,6 @@ class BlenderbotSmallDecoderLayer(nn.TransformerDecoderLayer):
                     attn_mask=memory_mask,
                     cache=None)
             else:
-                # print("StaticCache(decoder layer)\t", cache[1].k.shape)
-                # print("q(decoder layer)\t", tgt.shape)
-                # print("k,v(decoder layer)\t", memory.shape)
                 tgt, static_cache = self.cross_attn(
                     query=tgt,
                     key=memory,
@@ -258,7 +253,6 @@ class TransformerDecoder(nn.TransformerDecoder):
                              memory_mask=memory_mask,
                              cache=None)
             else:
-                # print("output(transformer decoder)\t:",output.shape)
                 output, new_cache = mod(output,
                                         memory,
                                         tgt_mask=tgt_mask,
@@ -443,10 +437,6 @@ class BlenderbotSmallDecoder(BlenderbotSmallPretrainedModel):
 
         hidden_states = decoder_inputs_embeds + decoder_inputs_embed_pos
         decoder_input = self.decoder_dropout(hidden_states)
-        # print("decoder_input(decoder)\t",decoder_input.shape)
-        # print("encoder_output(decoder)\t",encoder_output.shape)
-        # print("decoder_attention_mask(decoder)\t",decoder_attention_mask.shape)
-        # print("memory_mask(decoder)\t",memory_mask.shape)
         decoder_output = self.decoder(
             tgt=decoder_input,
             memory=encoder_output,
@@ -685,13 +675,6 @@ class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
         else:
             memory_mask = attention_mask
 
-        # if decoder_attention_mask is not None:
-        #     print("decoder_attention mask(model)\t",decoder_attention_mask.shape)
-        # if decoder_input_ids is not None:
-        #     print("decoder_input_ids(model):\t", decoder_input_ids.shape)
-        # if input_ids is not None:
-        #     print("memory_mask(model):\t", memory_mask.shape)
-        #     print("input_ids(model):\t",input_ids.shape)
         decoder_output = self.decoder(
             decoder_input_ids=decoder_input_ids,
             decoder_attention_mask=decoder_attention_mask,
@@ -706,6 +689,7 @@ class BlenderbotSmallModel(BlenderbotSmallPretrainedModel):
         This method is required for model with encoder-decoder architecture.
         """
         return self.encoder
+
 
 class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPretrainedModel):
     """
@@ -794,14 +778,14 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPretrainedModel):
                                       cache=None,
                                       **kwargs):
 
-        # initialize cache based on encoder output for decoding at 1st time step.
-        # print('decoder input ids\t',decoder_input_ids.shape)
-        # print('attention_mask\t',attention_mask.shape)
-        # print('encoder_output\t',encoder_output.shape)
+        if "encoder_output" is not None:
+            expand_size = int(decoder_input_ids.shape[0]/encoder_output.shape[0])
+            if expand_size > 1:
+                index = paddle.tile(
+                    paddle.arange(encoder_output.shape[0]).unsqueeze(-1),
+                    [1, expand_size]).reshape([-1])
+                encoder_output = paddle.index_select(encoder_output, index)
 
-        # for key in kwargs:
-        #     if key != 'cache':
-        #         print(key,":\t", kwargs[key].shape)
         if use_cache and cache is None:
             if encoder_output is None:
                 raise ValueError("Encoder output can not be none if `use_cache` is True")
@@ -809,9 +793,6 @@ class BlenderbotSmallForConditionalGeneration(BlenderbotSmallPretrainedModel):
 
         if cache is not None:
             decoder_input_ids = decoder_input_ids[:, -1:]
-        # print('decoder input ids (after)\t',decoder_input_ids.shape)
-        # print('encoder_output (after)\t',encoder_output.shape)
-        # print('StaticCache k\t',cache[0][1].k.shape)
         return {
             "input_ids":
             None,  # during prediction, Encoder_output is provided, do not need input_ids.

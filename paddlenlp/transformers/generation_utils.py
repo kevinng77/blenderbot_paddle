@@ -338,10 +338,6 @@ class GenerationMixin(object):
             seq_len = model_kwargs["seq_len"]
             model_kwargs["seq_len"] = paddle.index_select(seq_len, index)
 
-        if "encoder_output" in model_kwargs:
-            encoder_output = model_kwargs["encoder_output"]
-            model_kwargs["encoder_output"] = paddle.index_select(encoder_output, index)
-
         return input_ids, model_kwargs
 
     @staticmethod

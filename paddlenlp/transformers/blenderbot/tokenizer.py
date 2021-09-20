@@ -111,6 +111,8 @@ class BlenderbotTokenizer(GPTTokenizer):
             eos_token=eos_token,
             eol_token=eol_token)
         self.add_prefix = add_prefix
+        self.cls_token = cls_token
+        self.sep_token = sep_token
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """
