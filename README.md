@@ -12,7 +12,8 @@ English | [简体中文](README_cn.md)
       * [4.3 Model Verify](#43-model-verify)
          * [Verify Tokenizer](#verify-tokenizer)
          * [Verify Model Forward Consistency](#verify-model-forward-consistency)
-   * [4.4 Others](#44-others)
+   * [4.4 Conversation Example](#44-Conversation-Example )
+   * [4.5 Others](#45-others)
    * [5.Model Information](#5model-information)
 
 ## 1.Introduction
@@ -183,7 +184,34 @@ Verify `blenderbot-1B-distill`
 
 ![image-20210810125823870](img/README/image-20210810125823870.png)
 
-## 4.4 Others
+## 4.4 Conversation Example
+
+```python
+import paddle
+from paddlenlp.transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+
+pretrained_model_name = "blenderbot-400M-distill"
+tokenizer = BlenderbotTokenizer.from_pretrained(pretrained_model_name)
+model = BlenderbotForConditionalGeneration.from_pretrained(pretrained_model_name)
+
+sample_text = "My friends are cool but they eat too many carbs."
+inputs = tokenizer(sample_text, return_attention_mask=True, return_token_type_ids=False)
+inputs = {k: paddle.to_tensor([v]) for (k, v) in inputs.items()}
+
+# Generate response using beam search
+result_ids, scores = model.generate(input_ids=inputs['input_ids'],
+                                    max_length=60,
+                                    min_length=20,
+                                    decode_strategy='beam_search',
+                                    num_beams=10,
+                                    length_penalty=0.65)
+for sequence_ids in result_ids.numpy().tolist():
+    print("User:\t", sample_text)
+    print("bot:\t", tokenizer.convert_ids_to_string(sequence_ids))
+    # "bot:	  That's unfortunate. Are they trying to lose weight?"
+```
+
+## 4.5 Others
 
 **Blenderbot Vs. BlenderbotSmall**
 

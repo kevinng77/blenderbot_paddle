@@ -10,7 +10,8 @@
       * [4.3 模型核对](#43-模型核对)
          * [<strong>Tokenizer 核对</strong>](#tokenizer-核对)
          * [前向传导精度校验](#前向传导精度校验)
-      * [4.4 其他](#44-其他)
+      * [4.4 对话生成样例](#44-对话生成样例)
+      * [4.5 其他](#44-其他)
          * [模型对比 Blenderbot Vs. BlenderbotSmall](#模型对比-blenderbot-vs-blenderbotsmall)
          * [其他相关配置](#其他相关配置)
    * [5.模型信息](#5模型信息)
@@ -195,7 +196,34 @@ python model_check.py --model_name=blenderbot-1B-distill
 
 `blenderbot-3B ` 的权重是在太大了，在个人电脑上跑不动，因此也就没有做前向传导的对比测试了。
 
-### 4.4 其他
+### 4.4 对话生成样例
+
+```python
+import paddle
+from paddlenlp.transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
+
+pretrained_model_name = "blenderbot-400M-distill"
+tokenizer = BlenderbotTokenizer.from_pretrained(pretrained_model_name)
+model = BlenderbotForConditionalGeneration.from_pretrained(pretrained_model_name)
+
+sample_text = "My friends are cool but they eat too many carbs."
+inputs = tokenizer(sample_text, return_attention_mask=True, return_token_type_ids=False)
+inputs = {k: paddle.to_tensor([v]) for (k, v) in inputs.items()}
+
+# Generate response using beam search
+result_ids, scores = model.generate(input_ids=inputs['input_ids'],
+                                    max_length=60,
+                                    min_length=20,
+                                    decode_strategy='beam_search',
+                                    num_beams=10,
+                                    length_penalty=0.65)
+for sequence_ids in result_ids.numpy().tolist():
+    print("User:\t", sample_text)
+    print("bot:\t", tokenizer.convert_ids_to_string(sequence_ids))
+    # "bot:	  That's unfortunate. Are they trying to lose weight?"
+```
+
+### 4.5 其他
 
 #### 模型对比 Blenderbot Vs. BlenderbotSmall
 
