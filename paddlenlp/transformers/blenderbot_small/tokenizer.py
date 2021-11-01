@@ -71,11 +71,11 @@ class BlenderbotSmallTokenizer(GPTTokenizer):
     pretrained_resource_files_map = {
         "vocab_file": {
             "blenderbot_small-90M":
-                "data/blenderbot_small-90M/vocab.json"
+            "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot_small/blenderbot_small-90M-vocab.json",
         },
         "merges_file": {
             "blenderbot_small-90M":
-                "data/blenderbot_small-90M/merges.txt"
+            "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot_small/blenderbot_small-90M-merges.txt",
         }
     }
     pretrained_init_configuration = {"blenderbot_small-90M": {}}
