@@ -107,7 +107,7 @@ class BlenderbotSmallPretrainedModel(PretrainedModel):
     pretrained_resource_files_map = {
         "model_state": {
             "blenderbot_small-90M":
-                "data/blenderbot_small-90M/model_state.pdparams",
+            "https://paddlenlp.bj.bcebos.com/models/transformers/blenderbot_small/blenderbot_small-90M.pdparams",
         }
     }
     base_model_prefix = "blenderbot_small"
